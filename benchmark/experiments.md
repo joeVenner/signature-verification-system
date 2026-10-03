@@ -745,3 +745,82 @@ differences below ~2 EER points are within noise.
 * Sample: genuine (3 refs) MATCH 82.1; skilled forgery NO MATCH 30.7; different
   person NO MATCH 7.2; genuine with 1 ref UNCERTAIN 53.8 (single-specimen policy);
   blurred INCONCLUSIVE (no score). Tests 112/112 (11 new).
+
+
+---
+
+## EXP-015 — Stroke-level signals + 55-writer evaluation (1:1 accuracy, no training of a model)
+
+* **Why:** the v3 verifier decided on two signals only (coarse layout cosine, SIFT inliers).
+  On full CEDAR (55 writers) the 12-writer numbers did not hold: 1:1 skilled EER **16.5%**
+  (not 11.1%), because fusion weights and thresholds had been fitted on 12 writers.
+  A human examiner also looks at stroke direction, slant, rhythm and pen width; those were
+  not used.
+* **Data:** `benchmark/build_cedar_eval.py` builds two disjoint slices of full CEDAR
+  (55 writers x 6 genuine + 6 skilled forgeries each): **dev** = images 1-6, **test** =
+  images 13-18 (never used for any choice below; scored once). Random pairs are strided
+  subsamples (`--max-random 6000`, `--max-random-per-query 40`); capped and uncapped runs
+  agree within 0.1 point on zone rates.
+* **Candidates measured** (single-signal AUC genuine-vs-skilled on dev, equalised scans):
+  layout 0.877, banded-DTW horizontal ink profile 0.877, slant histogram EMD 0.868,
+  keypoints 0.855, chamfer/ICP stroke distance 0.857, **local stroke-direction agreement
+  after ICP alignment x coverage 0.919**, vertical profile 0.785, stroke width 0.698,
+  topology counts 0.59-0.62 (junctions, endpoints, Euler number; dropped), finer gradient
+  grids 0.82 (dropped), piecewise 3-part ICP 0.881 (dropped: no gain in fusion).
+* **Fusion:** compact 6-signal set (keypoint, stroke_direction, slant, column_profile,
+  row_profile, stroke_width), balanced L2 logistic, C = 0.1, writer-disjoint 2-fold CV on
+  dev: skilled AUC 0.907 -> **0.945**, EER 15.5% -> **12.5%**; different-writer EER
+  5.7% -> 2.6%. Greedy forward selection picked different 6-8 signals per condition and
+  plateaued at AUC ~0.95, so a compact fixed set was chosen over the greedy optimum. The
+  `layout` signal is still computed and reported but not fused (it received a negative
+  weight; redundant with slant + direction).
+* **Speed:** ICP on every 4th skeleton point, 6 iterations, two starting transforms
+  (identity and the RANSAC keypoint transform; one start only: AUC 0.881 vs 0.916),
+  DTW profiles resampled to 128 / 64 samples (no accuracy loss). A pair costs ~10 ms
+  (was ~1 ms); a `compare_signatures` request costs ~370 ms vs ~340 ms (denoising dominates).
+* **Result on the untouched test slice** (weights/thresholds fitted on dev only):
+
+  | | old, equalised | **new, equalised** | old, raw | **new, raw** |
+  |---|---|---|---|---|
+  | 1:1 skilled EER | 16.5% | **9.3%** | 16.4% | **10.4%** |
+  | 1:1 skilled AUC | 0.901 | **0.952** | 0.897 | **0.949** |
+  | 1:1 different-writer EER | 5.6% | **3.8%** | 5.5% | **3.5%** |
+  | 3-specimen skilled EER | 9.4% | **6.1%** | 12.7% | **6.4%** |
+
+  Production thresholds (each system's own), ACCEPT / REVIEW / REJECT %, equalised scans:
+
+  | | old 1 spec. | **new 1 spec.** | old 3 spec. | **new 3 spec.** |
+  |---|---|---|---|---|
+  | genuine | 0.4 / 92.4 / 7.3 | **15.9** / 78.9 / 5.2 | 72.7 / 23.3 / 3.9 | 29.4 / 65.2 / 5.5 |
+  | skilled forgery | 0.0 / 50.6 / 49.4 | 0.0 / 26.2 / **73.8** | **1.5** / 40.2 / 58.3 | **0.0** / 7.7 / **92.3** |
+  | different writer | 0.0 / 2.9 / 97.1 | 0.0 / 1.1 / 98.9 | 0.2 / 1.7 / 98.2 | 0.0 / 0.2 / 99.8 |
+
+  Honest reading: with **one** specimen the new system is clearly better on every row.
+  With **three** specimens the old thresholds accepted more genuine signatures (73%), but
+  also 1.5% of skilled forgeries on unseen writers' images; the new thresholds follow the
+  rule "ACCEPT = highest dev impostor logit + 1" on 55 writers, which is stricter, so fewer
+  genuine are auto-accepted (29%) at 0% forgeries accepted and far more forgeries rejected.
+  The rule makes ACCEPT a function of the single worst impostor and so grows stricter with
+  more impostor pairs; a percentile-based rule is a business choice (see EXP-012).
+* **Determinism:** unchanged guarantees (benchmark `deterministic=True`, new hermetic
+  cross-process tests with synthetic signatures). New numerical steps: skeletonisation,
+  KD-tree nearest neighbours, a 2x2 SVD, banded DP.
+* **Review gate (code-reviewer + security-auditor):**
+  * code-reviewer found a real bug: `slant = 1 - EMD` was unbounded below (down to -8; 44%
+    of skilled and 77% of different-writer dev pairs were negative). The fit had learned a
+    weight on that wide range. Fixed by dividing by the maximum EMD (9) - an exact affine
+    map, compensated in the weights (1.877 -> 16.893, bias -24.969 -> -39.985); refitting
+    reproduced weight 16.897 / bias -39.988 and identical thresholds. Regression tests added.
+    Also: `PairSimilarity.signals` made required, named constants for magic numbers,
+    immutable name map, direct unit tests for the Umeyama fit, DTW and ICP primitives.
+  * security-auditor: PASS (low risk). Hardened: deterministic cap of 20,000 skeleton points
+    (noise images skeletonised to up to 86k points; worst case then 10 specimens + noise was
+    12.7 s per request), scipy upper bound, `FusionModel` validates its signal keys.
+    Not done (production work, unchanged): per-request concurrency limit and rate limiting.
+* **Not verified:** the data-dependent test files (`test_pipeline.py`, `test_api_and_cli.py`,
+  `test_multi_reference.py`, `test_signature_compare.py`) are skipped without the repo's
+  sample images, which cannot be reconstructed from the CEDAR download (they were resized).
+  Their asserted outcomes (e.g. "genuine auto-clears") were tied to the old thresholds and
+  must be re-checked when the samples are available. 12-writer figures elsewhere in this
+  report are historical.
+* Tests: 65 passed, 3 skipped (adds 28 hermetic tests in `tests/test_stroke_geometry.py`).

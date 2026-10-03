@@ -3,6 +3,32 @@
 All numbers below are read from `benchmark/results/*.json` (byte-reproducible;
 see `DETERMINISM.md`). Full experiment history: `benchmark/experiments.md`.
 
+## Update (EXP-015): 55-writer evaluation and stroke-level signals
+
+The numbers further down were measured on 12 writers with a two-signal fusion and are kept
+as history. Re-measured on **full CEDAR (55 writers)** with an untouched test slice
+(images never used for fitting or threshold choice; see `benchmark/build_cedar_eval.py`),
+the previous system's 1:1 skilled EER was **16.5%**, not 11.1%. The system now also compares
+stroke direction after alignment, slant, ink rhythm (horizontal / vertical profiles) and
+pen width.
+
+| untouched test slice, 55 writers | previous | **now** |
+|---|---|---|
+| 1:1 skilled EER / AUC (equalised scans) | 16.5% / 0.901 | **9.3% / 0.952** |
+| 1:1 skilled EER / AUC (raw scans) | 16.4% / 0.897 | **10.4% / 0.949** |
+| 1:1 different-writer EER (equalised) | 5.6% | **3.8%** |
+| 3-specimen skilled EER (equalised) | 9.4% | **6.1%** |
+| 1 specimen: genuine MATCH / skilled MATCH / skilled NO MATCH | 0.4% / 0.0% / 49.4% | **15.9% / 0.0% / 73.8%** |
+| 3 specimens: genuine MATCH / skilled MATCH / skilled NO MATCH | 72.7% / 1.5% / 58.3% | 29.4% / **0.0%** / **92.3%** |
+| `compare` request latency (1 specimen) | ~340 ms | ~370 ms |
+
+With one specimen most genuine signatures are still routed to manual review (79%); a
+single original cannot support straight-through clearing at zero forgery acceptance.
+With three specimens the new ACCEPT cut-off is deliberately strict (it sits above the
+worst dev impostor), which lowers genuine auto-accept compared with the old cut-off that
+was tuned on only 12 writers and let 1.5% of skilled forgeries through. Details, caveats
+and the review-gate record: `benchmark/experiments.md` EXP-015.
+
 ## Data and protocol (why the old numbers were not comparable)
 
 * 76 distinct images (12 CEDAR writers × 4 genuine + 2 skilled forgeries, plus 4
