@@ -13,6 +13,7 @@ Production values are selected on ALL writers and printed for
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -22,7 +23,7 @@ import numpy as np
 
 from signature_verification_system.benchmark import metrics as M
 from signature_verification_system.benchmark.protocol import (
-    load_images, one_to_one_pairs, writer_dependent_trials, writer_folds,
+    cap_random_pairs, load_images, one_to_one_pairs, writer_dependent_trials, writer_folds,
 )
 from signature_verification_system.src.core.config import DEFAULT_CONFIG
 from signature_verification_system.src.verification.features import extract_features
@@ -53,7 +54,13 @@ def _cv(rows: List[Row]) -> Dict[str, Dict[str, float]]:
 
 
 def main() -> int:
-    images = load_images(PKG / "data" / "samples")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data-dir", default=str(PKG / "data" / "samples"))
+    ap.add_argument("--max-random", type=int, default=0, help="cap on random 1:1 pairs (0 = all)")
+    ap.add_argument("--max-random-per-query", type=int, default=0, help="cap on other-writer queries per held-out genuine")
+    ap.add_argument("--out", default=str(PKG / "benchmark" / "results" / "thresholds.json"))
+    args = ap.parse_args()
+    images = load_images(Path(args.data_dir))
     by_id = {s.image_id: s for s in images}
     folds = writer_folds(images)
     feats = {s.image_id: extract_features(cv2.imread(s.path)) for s in images}
@@ -64,11 +71,11 @@ def main() -> int:
 
     single: List[Row] = [
         (p.label, compare(feats[p.ref_id], feats[p.query_id]).fused_logit, fold(p.ref_id, p.query_id))
-        for p in one_to_one_pairs(images)
+        for p in cap_random_pairs(one_to_one_pairs(images), args.max_random)
     ]
     multi: List[Row] = [
         (t.label, compare_multi([feats[r] for r in t.ref_ids], feats[t.query_id]).fused_logit, fold(t.ref_ids[0], t.query_id))
-        for t in writer_dependent_trials(images)
+        for t in writer_dependent_trials(images, max_random_per_query=args.max_random_per_query)
     ]
     report = {}
     for name, rows in (("single", single), ("multi", multi)):
@@ -77,7 +84,7 @@ def main() -> int:
         print(f"{name}: accept={p['accept']:.4f} reject={p['reject']:.4f} hard_reject={p['hard_reject']:.4f}")
         for lab, c in cv.items():
             print(f"   CV {lab:8s} n={c['n']:4d} auto-accept={c['accept']:3d} ({c['accept']/c['n']:.3f})  rejected={c['reject']:3d} ({c['reject']/c['n']:.3f})")
-    (PKG / "benchmark" / "results" / "thresholds.json").write_text(json.dumps(report, indent=1, sort_keys=True) + "\n")
+    Path(args.out).write_text(json.dumps(report, indent=1, sort_keys=True) + "\n")
     return 0
 
 

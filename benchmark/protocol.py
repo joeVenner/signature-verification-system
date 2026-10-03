@@ -145,6 +145,19 @@ def one_to_one_pairs(images: List[SampleImage]) -> List[Pair]:
     return pairs
 
 
+def cap_random_pairs(pairs: List[Pair], limit: int) -> List[Pair]:
+    """Keep every genuine/skilled pair and an evenly strided subset of at most
+    `limit` random pairs (0 = keep all). Deterministic: depends only on order."""
+    if limit <= 0:
+        return pairs
+    random_pairs = [p for p in pairs if p.label == "random"]
+    if len(random_pairs) <= limit:
+        return pairs
+    stride = len(random_pairs) / limit
+    keep = {id(random_pairs[int(i * stride)]) for i in range(limit)}
+    return [p for p in pairs if p.label != "random" or id(p) in keep]
+
+
 @dataclass(frozen=True)
 class EnrollmentTrial:
     """Writer-dependent trial: questioned image vs a set of enrolled references."""
@@ -155,8 +168,13 @@ class EnrollmentTrial:
     writer: str
 
 
-def writer_dependent_trials(images: List[SampleImage], n_refs: int = 3) -> List[EnrollmentTrial]:
-    """Leave-one-genuine-out enrollment for writers with > n_refs genuines."""
+def writer_dependent_trials(
+    images: List[SampleImage], n_refs: int = 3, max_random_per_query: int = 0
+) -> List[EnrollmentTrial]:
+    """Leave-one-genuine-out enrollment for writers with > n_refs genuines.
+
+    `max_random_per_query` > 0 keeps an evenly strided subset of the other writers'
+    genuines per held-out query (deterministic); 0 keeps all (original protocol)."""
     by_writer: Dict[str, List[SampleImage]] = {}
     for s in images:
         by_writer.setdefault(s.writer, []).append(s)
@@ -175,6 +193,11 @@ def writer_dependent_trials(images: List[SampleImage], n_refs: int = 3) -> List[
             trials.append(EnrollmentTrial(refs, held_out.image_id, "genuine", writer))
             for f in forg:
                 trials.append(EnrollmentTrial(refs, f.image_id, "skilled", writer))
-            for o in others:
+            if max_random_per_query > 0 and len(others) > max_random_per_query:
+                stride = len(others) / max_random_per_query
+                others_used = [others[int(i * stride)] for i in range(max_random_per_query)]
+            else:
+                others_used = others
+            for o in others_used:
                 trials.append(EnrollmentTrial(refs, o.image_id, "random", writer))
     return trials
