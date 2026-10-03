@@ -1,0 +1,4133 @@
+{
+  "evaluation_metadata": {
+    "timestamp_utc": "2026-09-29T18:03:18Z",
+    "system_version": "1.0.0",
+    "model_version": "DET-SOTA-v2.0",
+    "policy_version": "CBUAE-POLICY-2026.09.2",
+    "base_data_directory": "/Users/mosaab/.mybot/workspace/signature_verification_system/data/samples",
+    "total_pairs_evaluated": 75,
+    "total_cheques_evaluated": 26
+  },
+  "score_distributions": {
+    "genuine_pairs": {
+      "mean": 0.6691,
+      "median": 0.6651,
+      "std": 0.1314,
+      "min": 0.4009,
+      "max": 0.8648,
+      "p25": 0.5894,
+      "p75": 0.7681
+    },
+    "skilled_forgeries": {
+      "mean": 0.4376,
+      "median": 0.436,
+      "std": 0.1445,
+      "min": 0.1731,
+      "max": 0.8061,
+      "p25": 0.3273,
+      "p75": 0.4999
+    },
+    "random_forgeries": {
+      "mean": 0.3056,
+      "median": 0.299,
+      "std": 0.0805,
+      "min": 0.1353,
+      "max": 0.4684,
+      "p25": 0.2625,
+      "p75": 0.3487
+    },
+    "all_forgeries_combined": {
+      "mean": 0.3716,
+      "median": 0.3422,
+      "std": 0.1343,
+      "min": 0.1353,
+      "max": 0.8061,
+      "p25": 0.2807,
+      "p75": 0.4448
+    }
+  },
+  "clearing_tier_distributions": {
+    "genuine_pairs": {
+      "green_stp": {
+        "count": 6,
+        "percent": 24.0
+      },
+      "amber_operator": {
+        "count": 16,
+        "percent": 64.0
+      },
+      "red_reject": {
+        "count": 3,
+        "percent": 12.0
+      }
+    },
+    "skilled_forgeries": {
+      "green_stp": {
+        "count": 1,
+        "percent": 4.0
+      },
+      "amber_operator": {
+        "count": 4,
+        "percent": 16.0
+      },
+      "red_reject": {
+        "count": 20,
+        "percent": 80.0
+      }
+    },
+    "random_forgeries": {
+      "green_stp": {
+        "count": 0,
+        "percent": 0.0
+      },
+      "amber_operator": {
+        "count": 0,
+        "percent": 0.0
+      },
+      "red_reject": {
+        "count": 25,
+        "percent": 100.0
+      }
+    },
+    "all_forgeries_combined": {
+      "green_stp": {
+        "count": 1,
+        "percent": 2.0
+      },
+      "amber_operator": {
+        "count": 4,
+        "percent": 8.0
+      },
+      "red_reject": {
+        "count": 45,
+        "percent": 90.0
+      }
+    }
+  },
+  "operational_rates": {
+    "green_threshold_0.78": {
+      "GAR": 24.0,
+      "FRR": 76.0,
+      "FAR_skilled": 4.0,
+      "FAR_random": 0.0,
+      "FAR_overall": 2.0
+    },
+    "amber_threshold_0.52": {
+      "GAR": 88.0,
+      "FRR": 12.0,
+      "FAR_skilled": 20.0,
+      "FAR_random": 0.0,
+      "FAR_overall": 10.0
+    },
+    "hard_reject_threshold_0.45": {
+      "rejection_rate_genuine": 12.0,
+      "rejection_rate_skilled": 56.0,
+      "rejection_rate_random": 96.0,
+      "rejection_rate_overall_forgery": 76.0
+    }
+  },
+  "roc_eer_analysis": {
+    "skilled_forgeries_vs_genuine": {
+      "eer_percent": 16.0,
+      "eer_threshold": 0.553,
+      "auc": 0.864,
+      "roc_curve": [
+        {
+          "threshold": 0.0,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.02,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.04,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.06,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.08,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.1,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.12,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.14,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.16,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.18,
+          "fpr": 0.96,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.2,
+          "fpr": 0.96,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.22,
+          "fpr": 0.92,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.24,
+          "fpr": 0.92,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.26,
+          "fpr": 0.88,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.28,
+          "fpr": 0.84,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.3,
+          "fpr": 0.8,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.32,
+          "fpr": 0.76,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.34,
+          "fpr": 0.72,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.36,
+          "fpr": 0.72,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.38,
+          "fpr": 0.68,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.4,
+          "fpr": 0.68,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.42,
+          "fpr": 0.64,
+          "tpr": 0.92,
+          "frr": 0.08
+        },
+        {
+          "threshold": 0.44,
+          "fpr": 0.44,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.46,
+          "fpr": 0.44,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.48,
+          "fpr": 0.36,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.5,
+          "fpr": 0.24,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.52,
+          "fpr": 0.2,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.54,
+          "fpr": 0.2,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.56,
+          "fpr": 0.16,
+          "tpr": 0.84,
+          "frr": 0.16
+        },
+        {
+          "threshold": 0.58,
+          "fpr": 0.16,
+          "tpr": 0.84,
+          "frr": 0.16
+        },
+        {
+          "threshold": 0.6,
+          "fpr": 0.16,
+          "tpr": 0.72,
+          "frr": 0.28
+        },
+        {
+          "threshold": 0.62,
+          "fpr": 0.12,
+          "tpr": 0.72,
+          "frr": 0.28
+        },
+        {
+          "threshold": 0.64,
+          "fpr": 0.08,
+          "tpr": 0.6,
+          "frr": 0.4
+        },
+        {
+          "threshold": 0.66,
+          "fpr": 0.04,
+          "tpr": 0.52,
+          "frr": 0.48
+        },
+        {
+          "threshold": 0.68,
+          "fpr": 0.04,
+          "tpr": 0.44,
+          "frr": 0.56
+        },
+        {
+          "threshold": 0.7,
+          "fpr": 0.04,
+          "tpr": 0.36,
+          "frr": 0.64
+        },
+        {
+          "threshold": 0.72,
+          "fpr": 0.04,
+          "tpr": 0.36,
+          "frr": 0.64
+        },
+        {
+          "threshold": 0.74,
+          "fpr": 0.04,
+          "tpr": 0.28,
+          "frr": 0.72
+        },
+        {
+          "threshold": 0.76,
+          "fpr": 0.04,
+          "tpr": 0.28,
+          "frr": 0.72
+        },
+        {
+          "threshold": 0.78,
+          "fpr": 0.04,
+          "tpr": 0.24,
+          "frr": 0.76
+        },
+        {
+          "threshold": 0.8,
+          "fpr": 0.04,
+          "tpr": 0.24,
+          "frr": 0.76
+        },
+        {
+          "threshold": 0.82,
+          "fpr": 0.0,
+          "tpr": 0.2,
+          "frr": 0.8
+        },
+        {
+          "threshold": 0.84,
+          "fpr": 0.0,
+          "tpr": 0.08,
+          "frr": 0.92
+        },
+        {
+          "threshold": 0.86,
+          "fpr": 0.0,
+          "tpr": 0.08,
+          "frr": 0.92
+        },
+        {
+          "threshold": 0.88,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.9,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.92,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.94,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.96,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.98,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 1.0,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        }
+      ]
+    },
+    "random_forgeries_vs_genuine": {
+      "eer_percent": 8.0,
+      "eer_threshold": 0.426,
+      "auc": 0.9848,
+      "roc_curve": [
+        {
+          "threshold": 0.0,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.02,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.04,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.06,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.08,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.1,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.12,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.14,
+          "fpr": 0.96,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.16,
+          "fpr": 0.96,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.18,
+          "fpr": 0.96,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.2,
+          "fpr": 0.88,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.22,
+          "fpr": 0.84,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.24,
+          "fpr": 0.8,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.26,
+          "fpr": 0.8,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.28,
+          "fpr": 0.64,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.3,
+          "fpr": 0.48,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.32,
+          "fpr": 0.4,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.34,
+          "fpr": 0.28,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.36,
+          "fpr": 0.2,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.38,
+          "fpr": 0.16,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.4,
+          "fpr": 0.16,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.42,
+          "fpr": 0.12,
+          "tpr": 0.92,
+          "frr": 0.08
+        },
+        {
+          "threshold": 0.44,
+          "fpr": 0.08,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.46,
+          "fpr": 0.04,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.48,
+          "fpr": 0.0,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.5,
+          "fpr": 0.0,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.52,
+          "fpr": 0.0,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.54,
+          "fpr": 0.0,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.56,
+          "fpr": 0.0,
+          "tpr": 0.84,
+          "frr": 0.16
+        },
+        {
+          "threshold": 0.58,
+          "fpr": 0.0,
+          "tpr": 0.84,
+          "frr": 0.16
+        },
+        {
+          "threshold": 0.6,
+          "fpr": 0.0,
+          "tpr": 0.72,
+          "frr": 0.28
+        },
+        {
+          "threshold": 0.62,
+          "fpr": 0.0,
+          "tpr": 0.72,
+          "frr": 0.28
+        },
+        {
+          "threshold": 0.64,
+          "fpr": 0.0,
+          "tpr": 0.6,
+          "frr": 0.4
+        },
+        {
+          "threshold": 0.66,
+          "fpr": 0.0,
+          "tpr": 0.52,
+          "frr": 0.48
+        },
+        {
+          "threshold": 0.68,
+          "fpr": 0.0,
+          "tpr": 0.44,
+          "frr": 0.56
+        },
+        {
+          "threshold": 0.7,
+          "fpr": 0.0,
+          "tpr": 0.36,
+          "frr": 0.64
+        },
+        {
+          "threshold": 0.72,
+          "fpr": 0.0,
+          "tpr": 0.36,
+          "frr": 0.64
+        },
+        {
+          "threshold": 0.74,
+          "fpr": 0.0,
+          "tpr": 0.28,
+          "frr": 0.72
+        },
+        {
+          "threshold": 0.76,
+          "fpr": 0.0,
+          "tpr": 0.28,
+          "frr": 0.72
+        },
+        {
+          "threshold": 0.78,
+          "fpr": 0.0,
+          "tpr": 0.24,
+          "frr": 0.76
+        },
+        {
+          "threshold": 0.8,
+          "fpr": 0.0,
+          "tpr": 0.24,
+          "frr": 0.76
+        },
+        {
+          "threshold": 0.82,
+          "fpr": 0.0,
+          "tpr": 0.2,
+          "frr": 0.8
+        },
+        {
+          "threshold": 0.84,
+          "fpr": 0.0,
+          "tpr": 0.08,
+          "frr": 0.92
+        },
+        {
+          "threshold": 0.86,
+          "fpr": 0.0,
+          "tpr": 0.08,
+          "frr": 0.92
+        },
+        {
+          "threshold": 0.88,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.9,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.92,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.94,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.96,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.98,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 1.0,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        }
+      ]
+    },
+    "overall_forgeries_vs_genuine": {
+      "eer_percent": 12.0,
+      "eer_threshold": 0.5,
+      "auc": 0.9244,
+      "roc_curve": [
+        {
+          "threshold": 0.0,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.02,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.04,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.06,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.08,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.1,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.12,
+          "fpr": 1.0,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.14,
+          "fpr": 0.98,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.16,
+          "fpr": 0.98,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.18,
+          "fpr": 0.96,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.2,
+          "fpr": 0.92,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.22,
+          "fpr": 0.88,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.24,
+          "fpr": 0.86,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.26,
+          "fpr": 0.84,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.28,
+          "fpr": 0.74,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.3,
+          "fpr": 0.64,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.32,
+          "fpr": 0.58,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.34,
+          "fpr": 0.5,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.36,
+          "fpr": 0.46,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.38,
+          "fpr": 0.42,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.4,
+          "fpr": 0.42,
+          "tpr": 1.0,
+          "frr": 0.0
+        },
+        {
+          "threshold": 0.42,
+          "fpr": 0.38,
+          "tpr": 0.92,
+          "frr": 0.08
+        },
+        {
+          "threshold": 0.44,
+          "fpr": 0.26,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.46,
+          "fpr": 0.24,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.48,
+          "fpr": 0.18,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.5,
+          "fpr": 0.12,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.52,
+          "fpr": 0.1,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.54,
+          "fpr": 0.1,
+          "tpr": 0.88,
+          "frr": 0.12
+        },
+        {
+          "threshold": 0.56,
+          "fpr": 0.08,
+          "tpr": 0.84,
+          "frr": 0.16
+        },
+        {
+          "threshold": 0.58,
+          "fpr": 0.08,
+          "tpr": 0.84,
+          "frr": 0.16
+        },
+        {
+          "threshold": 0.6,
+          "fpr": 0.08,
+          "tpr": 0.72,
+          "frr": 0.28
+        },
+        {
+          "threshold": 0.62,
+          "fpr": 0.06,
+          "tpr": 0.72,
+          "frr": 0.28
+        },
+        {
+          "threshold": 0.64,
+          "fpr": 0.04,
+          "tpr": 0.6,
+          "frr": 0.4
+        },
+        {
+          "threshold": 0.66,
+          "fpr": 0.02,
+          "tpr": 0.52,
+          "frr": 0.48
+        },
+        {
+          "threshold": 0.68,
+          "fpr": 0.02,
+          "tpr": 0.44,
+          "frr": 0.56
+        },
+        {
+          "threshold": 0.7,
+          "fpr": 0.02,
+          "tpr": 0.36,
+          "frr": 0.64
+        },
+        {
+          "threshold": 0.72,
+          "fpr": 0.02,
+          "tpr": 0.36,
+          "frr": 0.64
+        },
+        {
+          "threshold": 0.74,
+          "fpr": 0.02,
+          "tpr": 0.28,
+          "frr": 0.72
+        },
+        {
+          "threshold": 0.76,
+          "fpr": 0.02,
+          "tpr": 0.28,
+          "frr": 0.72
+        },
+        {
+          "threshold": 0.78,
+          "fpr": 0.02,
+          "tpr": 0.24,
+          "frr": 0.76
+        },
+        {
+          "threshold": 0.8,
+          "fpr": 0.02,
+          "tpr": 0.24,
+          "frr": 0.76
+        },
+        {
+          "threshold": 0.82,
+          "fpr": 0.0,
+          "tpr": 0.2,
+          "frr": 0.8
+        },
+        {
+          "threshold": 0.84,
+          "fpr": 0.0,
+          "tpr": 0.08,
+          "frr": 0.92
+        },
+        {
+          "threshold": 0.86,
+          "fpr": 0.0,
+          "tpr": 0.08,
+          "frr": 0.92
+        },
+        {
+          "threshold": 0.88,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.9,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.92,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.94,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.96,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 0.98,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        },
+        {
+          "threshold": 1.0,
+          "fpr": 0.0,
+          "tpr": 0.0,
+          "frr": 1.0
+        }
+      ]
+    }
+  },
+  "stage_latencies_ms": {
+    "iqa": {
+      "samples": 26,
+      "mean_ms": 25.616,
+      "median_ms": 20.345,
+      "std_ms": 10.695,
+      "min_ms": 9.632,
+      "max_ms": 43.076,
+      "p95_ms": 37.817
+    },
+    "binarization": {
+      "samples": 75,
+      "mean_ms": 2.395,
+      "median_ms": 2.217,
+      "std_ms": 0.861,
+      "min_ms": 1.92,
+      "max_ms": 6.689,
+      "p95_ms": 2.527
+    },
+    "hog": {
+      "samples": 75,
+      "mean_ms": 3.569,
+      "median_ms": 3.644,
+      "std_ms": 0.318,
+      "min_ms": 2.194,
+      "max_ms": 4.244,
+      "p95_ms": 3.894
+    },
+    "hu": {
+      "samples": 75,
+      "mean_ms": 0.043,
+      "median_ms": 0.042,
+      "std_ms": 0.003,
+      "min_ms": 0.035,
+      "max_ms": 0.056,
+      "p95_ms": 0.049
+    },
+    "skeleton": {
+      "samples": 75,
+      "mean_ms": 0.437,
+      "median_ms": 0.425,
+      "std_ms": 0.066,
+      "min_ms": 0.354,
+      "max_ms": 0.657,
+      "p95_ms": 0.556
+    },
+    "distance": {
+      "samples": 75,
+      "mean_ms": 0.185,
+      "median_ms": 0.183,
+      "std_ms": 0.019,
+      "min_ms": 0.154,
+      "max_ms": 0.24,
+      "p95_ms": 0.22
+    },
+    "audit": {
+      "samples": 75,
+      "mean_ms": 2.565,
+      "median_ms": 2.467,
+      "std_ms": 0.387,
+      "min_ms": 2.028,
+      "max_ms": 4.225,
+      "p95_ms": 3.269
+    }
+  },
+  "cheque_localization_benchmark": {
+    "total_cheques": 26,
+    "total_detected": 26,
+    "detection_rate_percent": 100.0,
+    "subtypes": {
+      "workspace_scan": {
+        "total": 1,
+        "detected": 1,
+        "accuracy_percent": 100.0
+      },
+      "real_bank_cheque": {
+        "total": 10,
+        "detected": 10,
+        "accuracy_percent": 100.0
+      },
+      "synthetic_benchmark": {
+        "total": 10,
+        "detected": 10,
+        "accuracy_percent": 100.0
+      },
+      "procedural_pantograph": {
+        "total": 5,
+        "detected": 5,
+        "accuracy_percent": 100.0
+      }
+    },
+    "iqa_pass_count": 25,
+    "iqa_pass_rate_percent": 96.15
+  },
+  "cheque_detailed_evaluations": [
+    {
+      "filename": "cheque_workspace_example.png",
+      "category": "workspace_scan",
+      "resolution": [
+        3024,
+        1724
+      ],
+      "detected": true,
+      "candidate_count": 1,
+      "best_zone": "generic_candidate",
+      "best_confidence": 0.65,
+      "best_bbox": {
+        "x": 589,
+        "y": 424,
+        "w": 199,
+        "h": 27
+      },
+      "candidates": [
+        {
+          "zone_type": "generic_candidate",
+          "confidence": 0.65,
+          "bbox": {
+            "x": 589,
+            "y": 424,
+            "w": 199,
+            "h": 27
+          },
+          "aspect_ratio": 7.37,
+          "stroke_density": 0.3052
+        }
+      ],
+      "iqa": {
+        "passed": false,
+        "skew_angle": -0.0,
+        "blur_score": 94.22,
+        "contrast_score": 10.52,
+        "brightness_score": 0.931,
+        "failure_reasons": [
+          "Insufficient contrast: RMS 10.5 < 20.0"
+        ]
+      },
+      "latency_ms": 544.9,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_01.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1578,
+        712
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 983,
+        "y": 406,
+        "w": 590,
+        "h": 161
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 983,
+            "y": 406,
+            "w": 590,
+            "h": 161
+          },
+          "aspect_ratio": 3.66,
+          "stroke_density": 0.0786
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 374,
+            "y": 351,
+            "w": 210,
+            "h": 225
+          },
+          "aspect_ratio": 0.93,
+          "stroke_density": 0.0477
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 6270.35,
+        "contrast_score": 45.65,
+        "brightness_score": 0.966,
+        "failure_reasons": []
+      },
+      "latency_ms": 122.76,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_02.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1584,
+        699
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 801,
+        "y": 338,
+        "w": 757,
+        "h": 262
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 801,
+            "y": 338,
+            "w": 757,
+            "h": 262
+          },
+          "aspect_ratio": 2.89,
+          "stroke_density": 0.0601
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 321,
+            "y": 337,
+            "w": 783,
+            "h": 270
+          },
+          "aspect_ratio": 2.9,
+          "stroke_density": 0.0597
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 8958.23,
+        "contrast_score": 60.89,
+        "brightness_score": 0.939,
+        "failure_reasons": []
+      },
+      "latency_ms": 133.86,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_03.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1587,
+        675
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 858,
+        "y": 419,
+        "w": 729,
+        "h": 146
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 858,
+            "y": 419,
+            "w": 729,
+            "h": 146
+          },
+          "aspect_ratio": 4.99,
+          "stroke_density": 0.0697
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 320,
+            "y": 325,
+            "w": 787,
+            "h": 259
+          },
+          "aspect_ratio": 3.04,
+          "stroke_density": 0.0592
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": 0.93,
+        "blur_score": 3937.19,
+        "contrast_score": 55.56,
+        "brightness_score": 0.942,
+        "failure_reasons": []
+      },
+      "latency_ms": 122.19,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_04.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1589,
+        691
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 894,
+        "y": 537,
+        "w": 504,
+        "h": 23
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 894,
+            "y": 537,
+            "w": 504,
+            "h": 23
+          },
+          "aspect_ratio": 21.91,
+          "stroke_density": 0.2576
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 322,
+            "y": 392,
+            "w": 781,
+            "h": 203
+          },
+          "aspect_ratio": 3.85,
+          "stroke_density": 0.0543
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 6864.51,
+        "contrast_score": 53.58,
+        "brightness_score": 0.953,
+        "failure_reasons": []
+      },
+      "latency_ms": 112.01,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_05.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1560,
+        704
+      ],
+      "detected": true,
+      "candidate_count": 1,
+      "best_zone": "secondary_cheque_zone",
+      "best_confidence": 0.75,
+      "best_bbox": {
+        "x": 358,
+        "y": 310,
+        "w": 337,
+        "h": 284
+      },
+      "candidates": [
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 358,
+            "y": 310,
+            "w": 337,
+            "h": 284
+          },
+          "aspect_ratio": 1.19,
+          "stroke_density": 0.097
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 6918.85,
+        "contrast_score": 54.27,
+        "brightness_score": 0.952,
+        "failure_reasons": []
+      },
+      "latency_ms": 71.39,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_06.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1576,
+        701
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1131,
+        "y": 421,
+        "w": 223,
+        "h": 163
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1131,
+            "y": 421,
+            "w": 223,
+            "h": 163
+          },
+          "aspect_ratio": 1.37,
+          "stroke_density": 0.0842
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 362,
+            "y": 309,
+            "w": 333,
+            "h": 284
+          },
+          "aspect_ratio": 1.17,
+          "stroke_density": 0.0922
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 6992.14,
+        "contrast_score": 52.84,
+        "brightness_score": 0.955,
+        "failure_reasons": []
+      },
+      "latency_ms": 76.44,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_07.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1587,
+        701
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 799,
+        "y": 340,
+        "w": 756,
+        "h": 264
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 799,
+            "y": 340,
+            "w": 756,
+            "h": 264
+          },
+          "aspect_ratio": 2.86,
+          "stroke_density": 0.0747
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 320,
+            "y": 314,
+            "w": 787,
+            "h": 295
+          },
+          "aspect_ratio": 2.67,
+          "stroke_density": 0.0658
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 9453.4,
+        "contrast_score": 61.61,
+        "brightness_score": 0.937,
+        "failure_reasons": []
+      },
+      "latency_ms": 132.58,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_08.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1560,
+        712
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 952,
+        "y": 399,
+        "w": 608,
+        "h": 225
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 952,
+            "y": 399,
+            "w": 608,
+            "h": 225
+          },
+          "aspect_ratio": 2.7,
+          "stroke_density": 0.0814
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 373,
+            "y": 351,
+            "w": 181,
+            "h": 225
+          },
+          "aspect_ratio": 0.8,
+          "stroke_density": 0.0556
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": 0.5,
+        "blur_score": 3275.44,
+        "contrast_score": 48.48,
+        "brightness_score": 0.956,
+        "failure_reasons": []
+      },
+      "latency_ms": 117.67,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_09.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1552,
+        717
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1008,
+        "y": 507,
+        "w": 416,
+        "h": 55
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1008,
+            "y": 507,
+            "w": 416,
+            "h": 55
+          },
+          "aspect_ratio": 7.56,
+          "stroke_density": 0.2375
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 367,
+            "y": 355,
+            "w": 223,
+            "h": 222
+          },
+          "aspect_ratio": 1.0,
+          "stroke_density": 0.0515
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": 0.5,
+        "blur_score": 2942.19,
+        "contrast_score": 46.24,
+        "brightness_score": 0.96,
+        "failure_reasons": []
+      },
+      "latency_ms": 108.52,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_real_scanned_10.jpg",
+      "category": "real_bank_cheque",
+      "resolution": [
+        1544,
+        725
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 993,
+        "y": 422,
+        "w": 551,
+        "h": 157
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 993,
+            "y": 422,
+            "w": 551,
+            "h": 157
+          },
+          "aspect_ratio": 3.51,
+          "stroke_density": 0.1171
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 365,
+            "y": 362,
+            "w": 225,
+            "h": 218
+          },
+          "aspect_ratio": 1.03,
+          "stroke_density": 0.0507
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": 0.5,
+        "blur_score": 3477.2,
+        "contrast_score": 49.21,
+        "brightness_score": 0.955,
+        "failure_reasons": []
+      },
+      "latency_ms": 120.88,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9000.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.0817
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1391.26,
+        "contrast_score": 45.28,
+        "brightness_score": 0.857,
+        "failure_reasons": []
+      },
+      "latency_ms": 363.37,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9001.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.0868
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1275.6,
+        "contrast_score": 43.6,
+        "brightness_score": 0.86,
+        "failure_reasons": []
+      },
+      "latency_ms": 339.09,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9002.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.0834
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1096.98,
+        "contrast_score": 41.76,
+        "brightness_score": 0.863,
+        "failure_reasons": []
+      },
+      "latency_ms": 333.36,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9003.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.0785
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1410.41,
+        "contrast_score": 41.01,
+        "brightness_score": 0.864,
+        "failure_reasons": []
+      },
+      "latency_ms": 333.48,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9004.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.0829
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1136.4,
+        "contrast_score": 41.57,
+        "brightness_score": 0.863,
+        "failure_reasons": []
+      },
+      "latency_ms": 328.34,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9005.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.0853
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1173.83,
+        "contrast_score": 42.47,
+        "brightness_score": 0.861,
+        "failure_reasons": []
+      },
+      "latency_ms": 321.74,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9006.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.0811
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1464.68,
+        "contrast_score": 42.27,
+        "brightness_score": 0.862,
+        "failure_reasons": []
+      },
+      "latency_ms": 342.15,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9007.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.078
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1221.22,
+        "contrast_score": 44.27,
+        "brightness_score": 0.858,
+        "failure_reasons": []
+      },
+      "latency_ms": 334.36,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9008.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.0817
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1260.97,
+        "contrast_score": 47.37,
+        "brightness_score": 0.853,
+        "failure_reasons": []
+      },
+      "latency_ms": 341.34,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_benchmark_synth_9009.jpg",
+      "category": "synthetic_benchmark",
+      "resolution": [
+        2365,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1888,
+        "y": 885,
+        "w": 251,
+        "h": 28
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1888,
+            "y": 885,
+            "w": 251,
+            "h": 28
+          },
+          "aspect_ratio": 8.96,
+          "stroke_density": 0.1949
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 506,
+            "y": 486,
+            "w": 880,
+            "h": 438
+          },
+          "aspect_ratio": 2.01,
+          "stroke_density": 0.0787
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1356.08,
+        "contrast_score": 41.51,
+        "brightness_score": 0.863,
+        "failure_reasons": []
+      },
+      "latency_ms": 362.33,
+      "clearing_adjudication": null
+    },
+    {
+      "filename": "cheque_procedural_pantograph_1001.png",
+      "category": "procedural_pantograph",
+      "resolution": [
+        2400,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 1,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1529,
+        "y": 675,
+        "w": 172,
+        "h": 100
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1529,
+            "y": 675,
+            "w": 172,
+            "h": 100
+          },
+          "aspect_ratio": 1.72,
+          "stroke_density": 0.0457
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1296.55,
+        "contrast_score": 24.65,
+        "brightness_score": 0.974,
+        "failure_reasons": []
+      },
+      "latency_ms": 284.2,
+      "clearing_adjudication": {
+        "reference_source": "pair_01_cedar_w01_ref.png",
+        "amount": 45820.5,
+        "similarity_score": 0.437,
+        "pure_decision_tier": "RED",
+        "pure_action": "REJECT",
+        "full_decision_tier": "RED",
+        "full_action": "REJECT",
+        "return_code": "SIG_DIFF_01",
+        "requires_four_eyes": true
+      }
+    },
+    {
+      "filename": "cheque_procedural_pantograph_1002.png",
+      "category": "procedural_pantograph",
+      "resolution": [
+        2400,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 2,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1520,
+        "y": 691,
+        "w": 173,
+        "h": 95
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1520,
+            "y": 691,
+            "w": 173,
+            "h": 95
+          },
+          "aspect_ratio": 1.82,
+          "stroke_density": 0.0514
+        },
+        {
+          "zone_type": "secondary_cheque_zone",
+          "confidence": 0.75,
+          "bbox": {
+            "x": 1534,
+            "y": 741,
+            "w": 28,
+            "h": 39
+          },
+          "aspect_ratio": 0.72,
+          "stroke_density": 0.1181
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1327.45,
+        "contrast_score": 24.8,
+        "brightness_score": 0.976,
+        "failure_reasons": []
+      },
+      "latency_ms": 280.14,
+      "clearing_adjudication": {
+        "reference_source": "pair_02_cedar_w01_ref.png",
+        "amount": 128400.0,
+        "similarity_score": 0.4069,
+        "pure_decision_tier": "RED",
+        "pure_action": "REJECT",
+        "full_decision_tier": "RED",
+        "full_action": "REJECT",
+        "return_code": "SIG_DIFF_01",
+        "requires_four_eyes": true
+      }
+    },
+    {
+      "filename": "cheque_procedural_pantograph_1003.png",
+      "category": "procedural_pantograph",
+      "resolution": [
+        2400,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 1,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1550,
+        "y": 703,
+        "w": 96,
+        "h": 52
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1550,
+            "y": 703,
+            "w": 96,
+            "h": 52
+          },
+          "aspect_ratio": 1.85,
+          "stroke_density": 0.0581
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1304.32,
+        "contrast_score": 24.64,
+        "brightness_score": 0.976,
+        "failure_reasons": []
+      },
+      "latency_ms": 287.92,
+      "clearing_adjudication": {
+        "reference_source": "pair_01_cedar_w01_forgery01.png",
+        "amount": 12750.0,
+        "similarity_score": 0.333,
+        "pure_decision_tier": "RED",
+        "pure_action": "REJECT",
+        "full_decision_tier": "RED",
+        "full_action": "REJECT",
+        "return_code": "SIG_DIFF_01",
+        "requires_four_eyes": true
+      }
+    },
+    {
+      "filename": "cheque_procedural_pantograph_1004.png",
+      "category": "procedural_pantograph",
+      "resolution": [
+        2400,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 1,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1552,
+        "y": 676,
+        "w": 439,
+        "h": 116
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1552,
+            "y": 676,
+            "w": 439,
+            "h": 116
+          },
+          "aspect_ratio": 3.78,
+          "stroke_density": 0.0594
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1352.29,
+        "contrast_score": 25.49,
+        "brightness_score": 0.975,
+        "failure_reasons": []
+      },
+      "latency_ms": 289.49,
+      "clearing_adjudication": {
+        "reference_source": "pair_00_synthetic_ref.png",
+        "amount": 315920.85,
+        "similarity_score": 0.5479,
+        "pure_decision_tier": "RED",
+        "pure_action": "MANDATORY_FOUR_EYES_ESCALATE",
+        "full_decision_tier": "RED",
+        "full_action": "MANDATORY_FOUR_EYES_ESCALATE",
+        "return_code": null,
+        "requires_four_eyes": true
+      }
+    },
+    {
+      "filename": "cheque_procedural_pantograph_1005.png",
+      "category": "procedural_pantograph",
+      "resolution": [
+        2400,
+        1100
+      ],
+      "detected": true,
+      "candidate_count": 1,
+      "best_zone": "primary_cheque_zone",
+      "best_confidence": 0.95,
+      "best_bbox": {
+        "x": 1552,
+        "y": 689,
+        "w": 439,
+        "h": 101
+      },
+      "candidates": [
+        {
+          "zone_type": "primary_cheque_zone",
+          "confidence": 0.95,
+          "bbox": {
+            "x": 1552,
+            "y": 689,
+            "w": 439,
+            "h": 101
+          },
+          "aspect_ratio": 4.35,
+          "stroke_density": 0.0576
+        }
+      ],
+      "iqa": {
+        "passed": true,
+        "skew_angle": -0.0,
+        "blur_score": 1295.76,
+        "contrast_score": 25.25,
+        "brightness_score": 0.975,
+        "failure_reasons": []
+      },
+      "latency_ms": 271.21,
+      "clearing_adjudication": {
+        "reference_source": "pair_00_synthetic_questioned.png",
+        "amount": 84000.0,
+        "similarity_score": 0.3492,
+        "pure_decision_tier": "RED",
+        "pure_action": "REJECT",
+        "full_decision_tier": "RED",
+        "full_action": "REJECT",
+        "return_code": "SIG_DIFF_01",
+        "requires_four_eyes": true
+      }
+    }
+  ],
+  "pair_detailed_evaluations": {
+    "genuine_pairs": [
+      {
+        "pair_id": "pair_00_synthetic",
+        "author": "synthetic_writer_A",
+        "ref_image": "pair_00_synthetic_ref.png",
+        "questioned_image": "pair_00_synthetic_questioned.png",
+        "similarity_score": 0.863,
+        "raw_score": 0.8194,
+        "calibrated_score": 0.863,
+        "is_match_amber_th": true,
+        "tier": "GREEN",
+        "latency_ms": 30.477,
+        "features": {
+          "hog": 0.8871,
+          "hu_moments": 0.9879,
+          "contour": 0.9087,
+          "skeleton": 0.5288,
+          "stroke_width": 0.9443,
+          "hesitation": 0.4849,
+          "curvature": 0.9538
+        }
+      },
+      {
+        "pair_id": "pair_01_cedar_w01_t1_t2",
+        "author": "cedar_writer_01",
+        "ref_image": "pair_01_cedar_w01_ref.png",
+        "questioned_image": "pair_01_cedar_w01_questioned.png",
+        "similarity_score": 0.6258,
+        "raw_score": 0.6948,
+        "calibrated_score": 0.6258,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.866,
+        "features": {
+          "hog": 0.7995,
+          "hu_moments": 0.5494,
+          "contour": 0.7754,
+          "skeleton": 0.4661,
+          "stroke_width": 0.8479,
+          "hesitation": 0.1546,
+          "curvature": 0.9064
+        }
+      },
+      {
+        "pair_id": "pair_02_cedar_w01_t3_t4",
+        "author": "cedar_writer_01",
+        "ref_image": "pair_02_cedar_w01_ref.png",
+        "questioned_image": "pair_02_cedar_w01_questioned.png",
+        "similarity_score": 0.8381,
+        "raw_score": 0.8022,
+        "calibrated_score": 0.8381,
+        "is_match_amber_th": true,
+        "tier": "GREEN",
+        "latency_ms": 7.924,
+        "features": {
+          "hog": 0.8906,
+          "hu_moments": 0.7312,
+          "contour": 0.9913,
+          "skeleton": 0.5211,
+          "stroke_width": 0.9413,
+          "hesitation": 0.1826,
+          "curvature": 0.9405
+        }
+      },
+      {
+        "pair_id": "pair_03_cedar_w02_t1_t2",
+        "author": "cedar_writer_02",
+        "ref_image": "pair_03_cedar_w02_ref.png",
+        "questioned_image": "pair_03_cedar_w02_questioned.png",
+        "similarity_score": 0.8243,
+        "raw_score": 0.7934,
+        "calibrated_score": 0.8243,
+        "is_match_amber_th": true,
+        "tier": "GREEN",
+        "latency_ms": 8.516,
+        "features": {
+          "hog": 0.796,
+          "hu_moments": 0.9508,
+          "contour": 0.9798,
+          "skeleton": 0.5112,
+          "stroke_width": 0.9683,
+          "hesitation": 0.1845,
+          "curvature": 0.7022
+        }
+      },
+      {
+        "pair_id": "pair_04_cedar_w02_t3_t4",
+        "author": "cedar_writer_02",
+        "ref_image": "pair_04_cedar_w02_ref.png",
+        "questioned_image": "pair_04_cedar_w02_questioned.png",
+        "similarity_score": 0.8648,
+        "raw_score": 0.8207,
+        "calibrated_score": 0.8648,
+        "is_match_amber_th": true,
+        "tier": "GREEN",
+        "latency_ms": 8.537,
+        "features": {
+          "hog": 0.8726,
+          "hu_moments": 0.973,
+          "contour": 0.8993,
+          "skeleton": 0.566,
+          "stroke_width": 0.9442,
+          "hesitation": 0.199,
+          "curvature": 0.9933
+        }
+      },
+      {
+        "pair_id": "pair_05_cedar_w03_t1_t2",
+        "author": "cedar_writer_03",
+        "ref_image": "pair_05_cedar_w03_ref.png",
+        "questioned_image": "pair_05_cedar_w03_questioned.png",
+        "similarity_score": 0.6249,
+        "raw_score": 0.6944,
+        "calibrated_score": 0.6249,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 8.099,
+        "features": {
+          "hog": 0.7397,
+          "hu_moments": 0.7229,
+          "contour": 0.8117,
+          "skeleton": 0.4399,
+          "stroke_width": 0.8769,
+          "hesitation": 0.2395,
+          "curvature": 0.9207
+        }
+      },
+      {
+        "pair_id": "pair_06_cedar_w03_t3_t4",
+        "author": "cedar_writer_03",
+        "ref_image": "pair_06_cedar_w03_ref.png",
+        "questioned_image": "pair_06_cedar_w03_questioned.png",
+        "similarity_score": 0.6307,
+        "raw_score": 0.6969,
+        "calibrated_score": 0.6307,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 8.151,
+        "features": {
+          "hog": 0.808,
+          "hu_moments": 0.7261,
+          "contour": 0.8313,
+          "skeleton": 0.4139,
+          "stroke_width": 0.8248,
+          "hesitation": 0.246,
+          "curvature": 0.7933
+        }
+      },
+      {
+        "pair_id": "pair_07_cedar_w04_t1_t2",
+        "author": "cedar_writer_04",
+        "ref_image": "pair_07_cedar_w04_ref.png",
+        "questioned_image": "pair_07_cedar_w04_questioned.png",
+        "similarity_score": 0.8114,
+        "raw_score": 0.7854,
+        "calibrated_score": 0.8114,
+        "is_match_amber_th": true,
+        "tier": "GREEN",
+        "latency_ms": 8.145,
+        "features": {
+          "hog": 0.8805,
+          "hu_moments": 0.7339,
+          "contour": 0.7662,
+          "skeleton": 0.6164,
+          "stroke_width": 0.9418,
+          "hesitation": 0.2029,
+          "curvature": 0.981
+        }
+      },
+      {
+        "pair_id": "pair_08_cedar_w04_t3_t4",
+        "author": "cedar_writer_04",
+        "ref_image": "pair_08_cedar_w04_ref.png",
+        "questioned_image": "pair_08_cedar_w04_questioned.png",
+        "similarity_score": 0.7317,
+        "raw_score": 0.7426,
+        "calibrated_score": 0.7317,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 8.269,
+        "features": {
+          "hog": 0.8026,
+          "hu_moments": 0.5415,
+          "contour": 0.9822,
+          "skeleton": 0.4577,
+          "stroke_width": 0.9974,
+          "hesitation": 0.1867,
+          "curvature": 0.788
+        }
+      },
+      {
+        "pair_id": "pair_09_cedar_w05_t1_t2",
+        "author": "cedar_writer_05",
+        "ref_image": "pair_09_cedar_w05_ref.png",
+        "questioned_image": "pair_09_cedar_w05_questioned.png",
+        "similarity_score": 0.4009,
+        "raw_score": 0.6021,
+        "calibrated_score": 0.4009,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.982,
+        "features": {
+          "hog": 0.5421,
+          "hu_moments": 0.7233,
+          "contour": 0.8735,
+          "skeleton": 0.3237,
+          "stroke_width": 0.8541,
+          "hesitation": 0.1296,
+          "curvature": 0.9559
+        }
+      },
+      {
+        "pair_id": "pair_10_cedar_w05_t3_t4",
+        "author": "cedar_writer_05",
+        "ref_image": "pair_10_cedar_w05_ref.png",
+        "questioned_image": "pair_10_cedar_w05_questioned.png",
+        "similarity_score": 0.6976,
+        "raw_score": 0.7264,
+        "calibrated_score": 0.6976,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.833,
+        "features": {
+          "hog": 0.7146,
+          "hu_moments": 0.9494,
+          "contour": 0.9754,
+          "skeleton": 0.4406,
+          "stroke_width": 0.8814,
+          "hesitation": 0.1707,
+          "curvature": 0.8568
+        }
+      },
+      {
+        "pair_id": "pair_11_cedar_w06_t1_t2",
+        "author": "cedar_writer_06",
+        "ref_image": "pair_11_cedar_w06_ref.png",
+        "questioned_image": "pair_11_cedar_w06_questioned.png",
+        "similarity_score": 0.5815,
+        "raw_score": 0.6763,
+        "calibrated_score": 0.5815,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.954,
+        "features": {
+          "hog": 0.7281,
+          "hu_moments": 0.9575,
+          "contour": 0.6927,
+          "skeleton": 0.4473,
+          "stroke_width": 0.836,
+          "hesitation": 0.2526,
+          "curvature": 0.8505
+        }
+      },
+      {
+        "pair_id": "pair_12_cedar_w06_t3_t4",
+        "author": "cedar_writer_06",
+        "ref_image": "pair_12_cedar_w06_ref.png",
+        "questioned_image": "pair_12_cedar_w06_questioned.png",
+        "similarity_score": 0.4317,
+        "raw_score": 0.6151,
+        "calibrated_score": 0.4317,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.689,
+        "features": {
+          "hog": 0.6592,
+          "hu_moments": 0.9461,
+          "contour": 0.6684,
+          "skeleton": 0.3176,
+          "stroke_width": 0.7552,
+          "hesitation": 0.1811,
+          "curvature": 0.9059
+        }
+      },
+      {
+        "pair_id": "pair_13_cedar_w07_t1_t2",
+        "author": "cedar_writer_07",
+        "ref_image": "pair_13_cedar_w07_ref.png",
+        "questioned_image": "pair_13_cedar_w07_questioned.png",
+        "similarity_score": 0.7681,
+        "raw_score": 0.7612,
+        "calibrated_score": 0.7681,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.707,
+        "features": {
+          "hog": 0.8848,
+          "hu_moments": 0.6684,
+          "contour": 0.8798,
+          "skeleton": 0.5481,
+          "stroke_width": 0.8327,
+          "hesitation": 0.1871,
+          "curvature": 0.9631
+        }
+      },
+      {
+        "pair_id": "pair_14_cedar_w07_t3_t4",
+        "author": "cedar_writer_07",
+        "ref_image": "pair_14_cedar_w07_ref.png",
+        "questioned_image": "pair_14_cedar_w07_questioned.png",
+        "similarity_score": 0.8371,
+        "raw_score": 0.8015,
+        "calibrated_score": 0.8371,
+        "is_match_amber_th": true,
+        "tier": "GREEN",
+        "latency_ms": 7.858,
+        "features": {
+          "hog": 0.8807,
+          "hu_moments": 0.9657,
+          "contour": 0.9182,
+          "skeleton": 0.5043,
+          "stroke_width": 0.8863,
+          "hesitation": 0.1539,
+          "curvature": 0.8209
+        }
+      },
+      {
+        "pair_id": "pair_15_cedar_w08_t1_t2",
+        "author": "cedar_writer_08",
+        "ref_image": "pair_15_cedar_w08_ref.png",
+        "questioned_image": "pair_15_cedar_w08_questioned.png",
+        "similarity_score": 0.6446,
+        "raw_score": 0.7029,
+        "calibrated_score": 0.6446,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.827,
+        "features": {
+          "hog": 0.6795,
+          "hu_moments": 0.979,
+          "contour": 0.8538,
+          "skeleton": 0.3864,
+          "stroke_width": 0.9499,
+          "hesitation": 0.1622,
+          "curvature": 0.9734
+        }
+      },
+      {
+        "pair_id": "pair_16_cedar_w08_t3_t4",
+        "author": "cedar_writer_08",
+        "ref_image": "pair_16_cedar_w08_ref.png",
+        "questioned_image": "pair_16_cedar_w08_questioned.png",
+        "similarity_score": 0.4131,
+        "raw_score": 0.6073,
+        "calibrated_score": 0.4131,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.654,
+        "features": {
+          "hog": 0.6485,
+          "hu_moments": 0.702,
+          "contour": 0.6004,
+          "skeleton": 0.3537,
+          "stroke_width": 0.8777,
+          "hesitation": 0.1703,
+          "curvature": 0.8074
+        }
+      },
+      {
+        "pair_id": "pair_17_cedar_w09_t1_t2",
+        "author": "cedar_writer_09",
+        "ref_image": "pair_17_cedar_w09_ref.png",
+        "questioned_image": "pair_17_cedar_w09_questioned.png",
+        "similarity_score": 0.6689,
+        "raw_score": 0.7135,
+        "calibrated_score": 0.6689,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 8.273,
+        "features": {
+          "hog": 0.7942,
+          "hu_moments": 0.5484,
+          "contour": 0.9111,
+          "skeleton": 0.4321,
+          "stroke_width": 0.9066,
+          "hesitation": 0.1776,
+          "curvature": 0.9133
+        }
+      },
+      {
+        "pair_id": "pair_18_cedar_w09_t3_t4",
+        "author": "cedar_writer_09",
+        "ref_image": "pair_18_cedar_w09_ref.png",
+        "questioned_image": "pair_18_cedar_w09_questioned.png",
+        "similarity_score": 0.6651,
+        "raw_score": 0.7118,
+        "calibrated_score": 0.6651,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 8.513,
+        "features": {
+          "hog": 0.8555,
+          "hu_moments": 0.4151,
+          "contour": 0.8191,
+          "skeleton": 0.4196,
+          "stroke_width": 0.9543,
+          "hesitation": 0.1797,
+          "curvature": 0.9578
+        }
+      },
+      {
+        "pair_id": "pair_19_cedar_w10_t1_t2",
+        "author": "cedar_writer_10",
+        "ref_image": "pair_19_cedar_w10_ref.png",
+        "questioned_image": "pair_19_cedar_w10_questioned.png",
+        "similarity_score": 0.6577,
+        "raw_score": 0.7086,
+        "calibrated_score": 0.6577,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.974,
+        "features": {
+          "hog": 0.7717,
+          "hu_moments": 0.693,
+          "contour": 0.7594,
+          "skeleton": 0.433,
+          "stroke_width": 0.9799,
+          "hesitation": 0.1729,
+          "curvature": 0.9189
+        }
+      },
+      {
+        "pair_id": "pair_20_cedar_w10_t3_t4",
+        "author": "cedar_writer_10",
+        "ref_image": "pair_20_cedar_w10_ref.png",
+        "questioned_image": "pair_20_cedar_w10_questioned.png",
+        "similarity_score": 0.69,
+        "raw_score": 0.723,
+        "calibrated_score": 0.69,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.948,
+        "features": {
+          "hog": 0.7705,
+          "hu_moments": 0.7103,
+          "contour": 0.8963,
+          "skeleton": 0.436,
+          "stroke_width": 0.9254,
+          "hesitation": 0.161,
+          "curvature": 0.9543
+        }
+      },
+      {
+        "pair_id": "pair_21_cedar_w11_t1_t2",
+        "author": "cedar_writer_11",
+        "ref_image": "pair_21_cedar_w11_ref.png",
+        "questioned_image": "pair_21_cedar_w11_questioned.png",
+        "similarity_score": 0.587,
+        "raw_score": 0.6786,
+        "calibrated_score": 0.587,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.926,
+        "features": {
+          "hog": 0.7489,
+          "hu_moments": 0.5521,
+          "contour": 0.7666,
+          "skeleton": 0.4641,
+          "stroke_width": 0.9265,
+          "hesitation": 0.2561,
+          "curvature": 0.9444
+        }
+      },
+      {
+        "pair_id": "pair_22_cedar_w11_t3_t4",
+        "author": "cedar_writer_11",
+        "ref_image": "pair_22_cedar_w11_ref.png",
+        "questioned_image": "pair_22_cedar_w11_questioned.png",
+        "similarity_score": 0.5472,
+        "raw_score": 0.6623,
+        "calibrated_score": 0.5472,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.918,
+        "features": {
+          "hog": 0.7078,
+          "hu_moments": 0.4186,
+          "contour": 0.9252,
+          "skeleton": 0.5033,
+          "stroke_width": 0.8185,
+          "hesitation": 0.288,
+          "curvature": 0.8814
+        }
+      },
+      {
+        "pair_id": "pair_23_cedar_w12_t1_t2",
+        "author": "cedar_writer_12",
+        "ref_image": "pair_23_cedar_w12_ref.png",
+        "questioned_image": "pair_23_cedar_w12_questioned.png",
+        "similarity_score": 0.7328,
+        "raw_score": 0.7432,
+        "calibrated_score": 0.7328,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.775,
+        "features": {
+          "hog": 0.7451,
+          "hu_moments": 0.9722,
+          "contour": 0.7711,
+          "skeleton": 0.5332,
+          "stroke_width": 0.962,
+          "hesitation": 0.2332,
+          "curvature": 0.9001
+        }
+      },
+      {
+        "pair_id": "pair_24_cedar_w12_t3_t4",
+        "author": "cedar_writer_12",
+        "ref_image": "pair_24_cedar_w12_ref.png",
+        "questioned_image": "pair_24_cedar_w12_questioned.png",
+        "similarity_score": 0.5894,
+        "raw_score": 0.6796,
+        "calibrated_score": 0.5894,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.853,
+        "features": {
+          "hog": 0.6964,
+          "hu_moments": 0.7317,
+          "contour": 0.8618,
+          "skeleton": 0.372,
+          "stroke_width": 0.961,
+          "hesitation": 0.2107,
+          "curvature": 0.9548
+        }
+      }
+    ],
+    "skilled_forgeries": [
+      {
+        "pair_id": "pair_00_synthetic",
+        "author": null,
+        "ref_image": "pair_00_synthetic_ref.png",
+        "questioned_image": "pair_00_synthetic_questioned.png",
+        "similarity_score": 0.8061,
+        "raw_score": 0.7823,
+        "calibrated_score": 0.8061,
+        "is_match_amber_th": true,
+        "tier": "GREEN",
+        "latency_ms": 11.028,
+        "features": {
+          "hog": 0.7106,
+          "hu_moments": 0.7507,
+          "contour": 0.9892,
+          "skeleton": 0.6448,
+          "stroke_width": 0.9931,
+          "hesitation": 0.487,
+          "curvature": 0.9926
+        }
+      },
+      {
+        "pair_id": "pair_01_cedar_w01_f01",
+        "author": null,
+        "ref_image": "pair_01_cedar_w01_ref.png",
+        "questioned_image": "pair_01_cedar_w01_forgery01.png",
+        "similarity_score": 0.4095,
+        "raw_score": 0.6058,
+        "calibrated_score": 0.4095,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.245,
+        "features": {
+          "hog": 0.6301,
+          "hu_moments": 0.5125,
+          "contour": 0.8393,
+          "skeleton": 0.3755,
+          "stroke_width": 0.7618,
+          "hesitation": 0.1695,
+          "curvature": 0.5734
+        }
+      },
+      {
+        "pair_id": "pair_02_cedar_w01_f02",
+        "author": null,
+        "ref_image": "pair_02_cedar_w01_ref.png",
+        "questioned_image": "pair_02_cedar_w01_forgery02.png",
+        "similarity_score": 0.4345,
+        "raw_score": 0.6163,
+        "calibrated_score": 0.4345,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 6.977,
+        "features": {
+          "hog": 0.593,
+          "hu_moments": 0.7294,
+          "contour": 0.7695,
+          "skeleton": 0.3918,
+          "stroke_width": 0.8162,
+          "hesitation": 0.1763,
+          "curvature": 0.5863
+        }
+      },
+      {
+        "pair_id": "pair_03_cedar_w02_f01",
+        "author": null,
+        "ref_image": "pair_03_cedar_w02_ref.png",
+        "questioned_image": "pair_03_cedar_w02_forgery01.png",
+        "similarity_score": 0.6599,
+        "raw_score": 0.7095,
+        "calibrated_score": 0.6599,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.969,
+        "features": {
+          "hog": 0.749,
+          "hu_moments": 0.9054,
+          "contour": 0.6563,
+          "skeleton": 0.5306,
+          "stroke_width": 0.9125,
+          "hesitation": 0.2278,
+          "curvature": 0.8848
+        }
+      },
+      {
+        "pair_id": "pair_04_cedar_w02_f02",
+        "author": null,
+        "ref_image": "pair_04_cedar_w02_ref.png",
+        "questioned_image": "pair_04_cedar_w02_forgery02.png",
+        "similarity_score": 0.6288,
+        "raw_score": 0.6961,
+        "calibrated_score": 0.6288,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.798,
+        "features": {
+          "hog": 0.6912,
+          "hu_moments": 0.9519,
+          "contour": 0.696,
+          "skeleton": 0.5074,
+          "stroke_width": 0.9439,
+          "hesitation": 0.2385,
+          "curvature": 0.9834
+        }
+      },
+      {
+        "pair_id": "pair_05_cedar_w03_f01",
+        "author": null,
+        "ref_image": "pair_05_cedar_w03_ref.png",
+        "questioned_image": "pair_05_cedar_w03_forgery01.png",
+        "similarity_score": 0.5112,
+        "raw_score": 0.6477,
+        "calibrated_score": 0.5112,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.789,
+        "features": {
+          "hog": 0.7345,
+          "hu_moments": 0.5484,
+          "contour": 0.6756,
+          "skeleton": 0.354,
+          "stroke_width": 0.9728,
+          "hesitation": 0.2197,
+          "curvature": 0.8858
+        }
+      },
+      {
+        "pair_id": "pair_06_cedar_w03_f02",
+        "author": null,
+        "ref_image": "pair_06_cedar_w03_ref.png",
+        "questioned_image": "pair_06_cedar_w03_forgery02.png",
+        "similarity_score": 0.4606,
+        "raw_score": 0.627,
+        "calibrated_score": 0.4606,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.653,
+        "features": {
+          "hog": 0.6195,
+          "hu_moments": 0.7154,
+          "contour": 0.7791,
+          "skeleton": 0.3434,
+          "stroke_width": 0.9064,
+          "hesitation": 0.2084,
+          "curvature": 0.9616
+        }
+      },
+      {
+        "pair_id": "pair_07_cedar_w04_f01",
+        "author": null,
+        "ref_image": "pair_07_cedar_w04_ref.png",
+        "questioned_image": "pair_07_cedar_w04_forgery01.png",
+        "similarity_score": 0.4999,
+        "raw_score": 0.6431,
+        "calibrated_score": 0.4999,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.05,
+        "features": {
+          "hog": 0.7067,
+          "hu_moments": 0.637,
+          "contour": 0.7461,
+          "skeleton": 0.3264,
+          "stroke_width": 0.9527,
+          "hesitation": 0.1948,
+          "curvature": 0.6954
+        }
+      },
+      {
+        "pair_id": "pair_08_cedar_w04_f02",
+        "author": null,
+        "ref_image": "pair_08_cedar_w04_ref.png",
+        "questioned_image": "pair_08_cedar_w04_forgery02.png",
+        "similarity_score": 0.2863,
+        "raw_score": 0.5495,
+        "calibrated_score": 0.2863,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.105,
+        "features": {
+          "hog": 0.6345,
+          "hu_moments": 0.5649,
+          "contour": 0.8572,
+          "skeleton": 0.1753,
+          "stroke_width": 0.827,
+          "hesitation": 0.2795,
+          "curvature": 0.8451
+        }
+      },
+      {
+        "pair_id": "pair_09_cedar_w05_f01",
+        "author": null,
+        "ref_image": "pair_09_cedar_w05_ref.png",
+        "questioned_image": "pair_09_cedar_w05_forgery01.png",
+        "similarity_score": 0.2527,
+        "raw_score": 0.5318,
+        "calibrated_score": 0.2527,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.868,
+        "features": {
+          "hog": 0.5237,
+          "hu_moments": 0.5475,
+          "contour": 0.5692,
+          "skeleton": 0.307,
+          "stroke_width": 0.9126,
+          "hesitation": 0.1672,
+          "curvature": 0.9117
+        }
+      },
+      {
+        "pair_id": "pair_10_cedar_w05_f02",
+        "author": null,
+        "ref_image": "pair_10_cedar_w05_ref.png",
+        "questioned_image": "pair_10_cedar_w05_forgery02.png",
+        "similarity_score": 0.3077,
+        "raw_score": 0.56,
+        "calibrated_score": 0.3077,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.758,
+        "features": {
+          "hog": 0.5438,
+          "hu_moments": 0.5219,
+          "contour": 0.9482,
+          "skeleton": 0.2368,
+          "stroke_width": 0.8614,
+          "hesitation": 0.1987,
+          "curvature": 0.8734
+        }
+      },
+      {
+        "pair_id": "pair_11_cedar_w06_f01",
+        "author": null,
+        "ref_image": "pair_11_cedar_w06_ref.png",
+        "questioned_image": "pair_11_cedar_w06_forgery01.png",
+        "similarity_score": 0.436,
+        "raw_score": 0.6169,
+        "calibrated_score": 0.436,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.496,
+        "features": {
+          "hog": 0.5755,
+          "hu_moments": 0.7106,
+          "contour": 0.8387,
+          "skeleton": 0.3268,
+          "stroke_width": 0.9251,
+          "hesitation": 0.1985,
+          "curvature": 0.9568
+        }
+      },
+      {
+        "pair_id": "pair_12_cedar_w06_f02",
+        "author": null,
+        "ref_image": "pair_12_cedar_w06_ref.png",
+        "questioned_image": "pair_12_cedar_w06_forgery02.png",
+        "similarity_score": 0.3758,
+        "raw_score": 0.5913,
+        "calibrated_score": 0.3758,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.604,
+        "features": {
+          "hog": 0.6278,
+          "hu_moments": 0.9186,
+          "contour": 0.7537,
+          "skeleton": 0.2728,
+          "stroke_width": 0.7247,
+          "hesitation": 0.232,
+          "curvature": 0.7978
+        }
+      },
+      {
+        "pair_id": "pair_13_cedar_w07_f01",
+        "author": null,
+        "ref_image": "pair_13_cedar_w07_ref.png",
+        "questioned_image": "pair_13_cedar_w07_forgery01.png",
+        "similarity_score": 0.5529,
+        "raw_score": 0.6646,
+        "calibrated_score": 0.5529,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.386,
+        "features": {
+          "hog": 0.8259,
+          "hu_moments": 0.9293,
+          "contour": 0.8228,
+          "skeleton": 0.3759,
+          "stroke_width": 0.6688,
+          "hesitation": 0.2906,
+          "curvature": 0.8964
+        }
+      },
+      {
+        "pair_id": "pair_14_cedar_w07_f02",
+        "author": null,
+        "ref_image": "pair_14_cedar_w07_ref.png",
+        "questioned_image": "pair_14_cedar_w07_forgery02.png",
+        "similarity_score": 0.4922,
+        "raw_score": 0.64,
+        "calibrated_score": 0.4922,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.456,
+        "features": {
+          "hog": 0.8256,
+          "hu_moments": 0.6902,
+          "contour": 0.7018,
+          "skeleton": 0.3426,
+          "stroke_width": 0.6855,
+          "hesitation": 0.1971,
+          "curvature": 0.9506
+        }
+      },
+      {
+        "pair_id": "pair_15_cedar_w08_f01",
+        "author": null,
+        "ref_image": "pair_15_cedar_w08_ref.png",
+        "questioned_image": "pair_15_cedar_w08_forgery01.png",
+        "similarity_score": 0.4637,
+        "raw_score": 0.6283,
+        "calibrated_score": 0.4637,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.829,
+        "features": {
+          "hog": 0.5586,
+          "hu_moments": 0.9716,
+          "contour": 0.7424,
+          "skeleton": 0.3864,
+          "stroke_width": 0.8877,
+          "hesitation": 0.2474,
+          "curvature": 0.9506
+        }
+      },
+      {
+        "pair_id": "pair_16_cedar_w08_f02",
+        "author": null,
+        "ref_image": "pair_16_cedar_w08_ref.png",
+        "questioned_image": "pair_16_cedar_w08_forgery02.png",
+        "similarity_score": 0.4257,
+        "raw_score": 0.6126,
+        "calibrated_score": 0.4257,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.763,
+        "features": {
+          "hog": 0.6104,
+          "hu_moments": 0.5345,
+          "contour": 0.8329,
+          "skeleton": 0.3178,
+          "stroke_width": 0.9408,
+          "hesitation": 0.1539,
+          "curvature": 0.909
+        }
+      },
+      {
+        "pair_id": "pair_17_cedar_w09_f01",
+        "author": null,
+        "ref_image": "pair_17_cedar_w09_ref.png",
+        "questioned_image": "pair_17_cedar_w09_forgery01.png",
+        "similarity_score": 0.4371,
+        "raw_score": 0.6174,
+        "calibrated_score": 0.4371,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.065,
+        "features": {
+          "hog": 0.7358,
+          "hu_moments": 0.4191,
+          "contour": 0.7055,
+          "skeleton": 0.3414,
+          "stroke_width": 0.8884,
+          "hesitation": 0.2345,
+          "curvature": 0.9129
+        }
+      },
+      {
+        "pair_id": "pair_18_cedar_w09_f02",
+        "author": null,
+        "ref_image": "pair_18_cedar_w09_ref.png",
+        "questioned_image": "pair_18_cedar_w09_forgery02.png",
+        "similarity_score": 0.4891,
+        "raw_score": 0.6387,
+        "calibrated_score": 0.4891,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.048,
+        "features": {
+          "hog": 0.738,
+          "hu_moments": 0.4185,
+          "contour": 0.7516,
+          "skeleton": 0.3676,
+          "stroke_width": 0.8982,
+          "hesitation": 0.2117,
+          "curvature": 0.8626
+        }
+      },
+      {
+        "pair_id": "pair_19_cedar_w10_f01",
+        "author": null,
+        "ref_image": "pair_19_cedar_w10_ref.png",
+        "questioned_image": "pair_19_cedar_w10_forgery01.png",
+        "similarity_score": 0.2117,
+        "raw_score": 0.508,
+        "calibrated_score": 0.2117,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.48,
+        "features": {
+          "hog": 0.4782,
+          "hu_moments": 0.5296,
+          "contour": 0.5163,
+          "skeleton": 0.2877,
+          "stroke_width": 0.9313,
+          "hesitation": 0.1835,
+          "curvature": 0.7199
+        }
+      },
+      {
+        "pair_id": "pair_20_cedar_w10_f02",
+        "author": null,
+        "ref_image": "pair_20_cedar_w10_ref.png",
+        "questioned_image": "pair_20_cedar_w10_forgery02.png",
+        "similarity_score": 0.3273,
+        "raw_score": 0.5694,
+        "calibrated_score": 0.3273,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.24,
+        "features": {
+          "hog": 0.4786,
+          "hu_moments": 0.6976,
+          "contour": 0.7667,
+          "skeleton": 0.2949,
+          "stroke_width": 0.9558,
+          "hesitation": 0.1607,
+          "curvature": 0.8626
+        }
+      },
+      {
+        "pair_id": "pair_21_cedar_w11_f01",
+        "author": null,
+        "ref_image": "pair_21_cedar_w11_ref.png",
+        "questioned_image": "pair_21_cedar_w11_forgery01.png",
+        "similarity_score": 0.1731,
+        "raw_score": 0.4822,
+        "calibrated_score": 0.1731,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.557,
+        "features": {
+          "hog": 0.4715,
+          "hu_moments": 0.5352,
+          "contour": 0.7432,
+          "skeleton": 0.2556,
+          "stroke_width": 0.6188,
+          "hesitation": 0.2394,
+          "curvature": 0.8995
+        }
+      },
+      {
+        "pair_id": "pair_22_cedar_w11_f02",
+        "author": null,
+        "ref_image": "pair_22_cedar_w11_ref.png",
+        "questioned_image": "pair_22_cedar_w11_forgery02.png",
+        "similarity_score": 0.2636,
+        "raw_score": 0.5377,
+        "calibrated_score": 0.2636,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.433,
+        "features": {
+          "hog": 0.5357,
+          "hu_moments": 0.5487,
+          "contour": 0.7953,
+          "skeleton": 0.3398,
+          "stroke_width": 0.6398,
+          "hesitation": 0.2406,
+          "curvature": 0.973
+        }
+      },
+      {
+        "pair_id": "pair_23_cedar_w12_f01",
+        "author": null,
+        "ref_image": "pair_23_cedar_w12_ref.png",
+        "questioned_image": "pair_23_cedar_w12_forgery01.png",
+        "similarity_score": 0.6068,
+        "raw_score": 0.6868,
+        "calibrated_score": 0.6068,
+        "is_match_amber_th": true,
+        "tier": "AMBER",
+        "latency_ms": 7.831,
+        "features": {
+          "hog": 0.7231,
+          "hu_moments": 0.7337,
+          "contour": 0.8355,
+          "skeleton": 0.4185,
+          "stroke_width": 0.8696,
+          "hesitation": 0.1868,
+          "curvature": 0.9433
+        }
+      },
+      {
+        "pair_id": "pair_24_cedar_w12_f02",
+        "author": null,
+        "ref_image": "pair_24_cedar_w12_ref.png",
+        "questioned_image": "pair_24_cedar_w12_forgery02.png",
+        "similarity_score": 0.4271,
+        "raw_score": 0.6132,
+        "calibrated_score": 0.4271,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.806,
+        "features": {
+          "hog": 0.7085,
+          "hu_moments": 0.72,
+          "contour": 0.735,
+          "skeleton": 0.3308,
+          "stroke_width": 0.6684,
+          "hesitation": 0.1653,
+          "curvature": 0.8537
+        }
+      }
+    ],
+    "random_forgeries": [
+      {
+        "pair_id": "pair_00_synthetic",
+        "author": null,
+        "ref_image": "pair_00_synthetic_ref.png",
+        "questioned_image": "pair_00_synthetic_questioned.png",
+        "similarity_score": 0.4474,
+        "raw_score": 0.6216,
+        "calibrated_score": 0.4474,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 11.296,
+        "features": {
+          "hog": 0.5785,
+          "hu_moments": 0.5533,
+          "contour": 0.9725,
+          "skeleton": 0.3595,
+          "stroke_width": 0.9152,
+          "hesitation": 0.5244,
+          "curvature": 0.984
+        }
+      },
+      {
+        "pair_id": "pair_01_cedar_w01_vs_w02",
+        "author": null,
+        "ref_image": "pair_01_ref_w01.png",
+        "questioned_image": "pair_01_random_w02.png",
+        "similarity_score": 0.2649,
+        "raw_score": 0.5384,
+        "calibrated_score": 0.2649,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.032,
+        "features": {
+          "hog": 0.5675,
+          "hu_moments": 0.6505,
+          "contour": 0.6212,
+          "skeleton": 0.1886,
+          "stroke_width": 0.8958,
+          "hesitation": 0.1831,
+          "curvature": 0.9432
+        }
+      },
+      {
+        "pair_id": "pair_02_cedar_w01_vs_w05",
+        "author": null,
+        "ref_image": "pair_02_ref_w01.png",
+        "questioned_image": "pair_02_random_w05.png",
+        "similarity_score": 0.4257,
+        "raw_score": 0.6126,
+        "calibrated_score": 0.4257,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.608,
+        "features": {
+          "hog": 0.5753,
+          "hu_moments": 0.4067,
+          "contour": 0.9953,
+          "skeleton": 0.3505,
+          "stroke_width": 0.891,
+          "hesitation": 0.1463,
+          "curvature": 0.8616
+        }
+      },
+      {
+        "pair_id": "pair_03_cedar_w02_vs_w03",
+        "author": null,
+        "ref_image": "pair_03_ref_w02.png",
+        "questioned_image": "pair_03_random_w03.png",
+        "similarity_score": 0.2969,
+        "raw_score": 0.5547,
+        "calibrated_score": 0.2969,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.026,
+        "features": {
+          "hog": 0.5939,
+          "hu_moments": 0.5304,
+          "contour": 0.5744,
+          "skeleton": 0.3154,
+          "stroke_width": 0.9549,
+          "hesitation": 0.2407,
+          "curvature": 0.8982
+        }
+      },
+      {
+        "pair_id": "pair_04_cedar_w02_vs_w06",
+        "author": null,
+        "ref_image": "pair_04_ref_w02.png",
+        "questioned_image": "pair_04_random_w06.png",
+        "similarity_score": 0.2935,
+        "raw_score": 0.5531,
+        "calibrated_score": 0.2935,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.759,
+        "features": {
+          "hog": 0.6166,
+          "hu_moments": 0.8565,
+          "contour": 0.5947,
+          "skeleton": 0.1744,
+          "stroke_width": 0.805,
+          "hesitation": 0.191,
+          "curvature": 0.9
+        }
+      },
+      {
+        "pair_id": "pair_05_cedar_w03_vs_w04",
+        "author": null,
+        "ref_image": "pair_05_ref_w03.png",
+        "questioned_image": "pair_05_random_w04.png",
+        "similarity_score": 0.3231,
+        "raw_score": 0.5674,
+        "calibrated_score": 0.3231,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.953,
+        "features": {
+          "hog": 0.5735,
+          "hu_moments": 0.6922,
+          "contour": 0.7699,
+          "skeleton": 0.2747,
+          "stroke_width": 0.7552,
+          "hesitation": 0.1773,
+          "curvature": 0.8435
+        }
+      },
+      {
+        "pair_id": "pair_06_cedar_w03_vs_w07",
+        "author": null,
+        "ref_image": "pair_06_ref_w03.png",
+        "questioned_image": "pair_06_random_w07.png",
+        "similarity_score": 0.3487,
+        "raw_score": 0.5792,
+        "calibrated_score": 0.3487,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.696,
+        "features": {
+          "hog": 0.6734,
+          "hu_moments": 0.684,
+          "contour": 0.8721,
+          "skeleton": 0.2731,
+          "stroke_width": 0.5071,
+          "hesitation": 0.1501,
+          "curvature": 0.6485
+        }
+      },
+      {
+        "pair_id": "pair_07_cedar_w04_vs_w05",
+        "author": null,
+        "ref_image": "pair_07_ref_w04.png",
+        "questioned_image": "pair_07_random_w05.png",
+        "similarity_score": 0.2073,
+        "raw_score": 0.5052,
+        "calibrated_score": 0.2073,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.991,
+        "features": {
+          "hog": 0.5145,
+          "hu_moments": 0.3976,
+          "contour": 0.8972,
+          "skeleton": 0.2291,
+          "stroke_width": 0.6237,
+          "hesitation": 0.1463,
+          "curvature": 0.9323
+        }
+      },
+      {
+        "pair_id": "pair_08_cedar_w04_vs_w08",
+        "author": null,
+        "ref_image": "pair_08_ref_w04.png",
+        "questioned_image": "pair_08_random_w08.png",
+        "similarity_score": 0.1814,
+        "raw_score": 0.4881,
+        "calibrated_score": 0.1814,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.005,
+        "features": {
+          "hog": 0.4525,
+          "hu_moments": 0.8549,
+          "contour": 0.729,
+          "skeleton": 0.2081,
+          "stroke_width": 0.6325,
+          "hesitation": 0.2255,
+          "curvature": 0.9813
+        }
+      },
+      {
+        "pair_id": "pair_09_cedar_w05_vs_w06",
+        "author": null,
+        "ref_image": "pair_09_ref_w05.png",
+        "questioned_image": "pair_09_random_w06.png",
+        "similarity_score": 0.2922,
+        "raw_score": 0.5524,
+        "calibrated_score": 0.2922,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.693,
+        "features": {
+          "hog": 0.5083,
+          "hu_moments": 0.5444,
+          "contour": 0.8586,
+          "skeleton": 0.2532,
+          "stroke_width": 0.9276,
+          "hesitation": 0.191,
+          "curvature": 0.7314
+        }
+      },
+      {
+        "pair_id": "pair_10_cedar_w05_vs_w09",
+        "author": null,
+        "ref_image": "pair_10_ref_w05.png",
+        "questioned_image": "pair_10_random_w09.png",
+        "similarity_score": 0.3526,
+        "raw_score": 0.581,
+        "calibrated_score": 0.3526,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.009,
+        "features": {
+          "hog": 0.6014,
+          "hu_moments": 0.7354,
+          "contour": 0.7836,
+          "skeleton": 0.2242,
+          "stroke_width": 0.9259,
+          "hesitation": 0.2085,
+          "curvature": 0.9087
+        }
+      },
+      {
+        "pair_id": "pair_11_cedar_w06_vs_w07",
+        "author": null,
+        "ref_image": "pair_11_ref_w06.png",
+        "questioned_image": "pair_11_random_w07.png",
+        "similarity_score": 0.261,
+        "raw_score": 0.5363,
+        "calibrated_score": 0.261,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.591,
+        "features": {
+          "hog": 0.6398,
+          "hu_moments": 0.622,
+          "contour": 0.8674,
+          "skeleton": 0.1283,
+          "stroke_width": 0.5864,
+          "hesitation": 0.1501,
+          "curvature": 0.5242
+        }
+      },
+      {
+        "pair_id": "pair_12_cedar_w06_vs_w10",
+        "author": null,
+        "ref_image": "pair_12_ref_w06.png",
+        "questioned_image": "pair_12_random_w10.png",
+        "similarity_score": 0.299,
+        "raw_score": 0.5558,
+        "calibrated_score": 0.299,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.695,
+        "features": {
+          "hog": 0.5313,
+          "hu_moments": 0.8948,
+          "contour": 0.5739,
+          "skeleton": 0.2149,
+          "stroke_width": 0.937,
+          "hesitation": 0.1778,
+          "curvature": 0.5981
+        }
+      },
+      {
+        "pair_id": "pair_13_cedar_w07_vs_w08",
+        "author": null,
+        "ref_image": "pair_13_ref_w07.png",
+        "questioned_image": "pair_13_random_w08.png",
+        "similarity_score": 0.4168,
+        "raw_score": 0.6089,
+        "calibrated_score": 0.4168,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.663,
+        "features": {
+          "hog": 0.6475,
+          "hu_moments": 0.8852,
+          "contour": 0.9309,
+          "skeleton": 0.3403,
+          "stroke_width": 0.5856,
+          "hesitation": 0.2255,
+          "curvature": 0.7834
+        }
+      },
+      {
+        "pair_id": "pair_14_cedar_w07_vs_w11",
+        "author": null,
+        "ref_image": "pair_14_ref_w07.png",
+        "questioned_image": "pair_14_random_w11.png",
+        "similarity_score": 0.1353,
+        "raw_score": 0.4521,
+        "calibrated_score": 0.1353,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.831,
+        "features": {
+          "hog": 0.5937,
+          "hu_moments": 0.5136,
+          "contour": 0.6948,
+          "skeleton": 0.1964,
+          "stroke_width": 0.3822,
+          "hesitation": 0.221,
+          "curvature": 0.6708
+        }
+      },
+      {
+        "pair_id": "pair_15_cedar_w08_vs_w09",
+        "author": null,
+        "ref_image": "pair_15_ref_w08.png",
+        "questioned_image": "pair_15_random_w09.png",
+        "similarity_score": 0.3357,
+        "raw_score": 0.5733,
+        "calibrated_score": 0.3357,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.976,
+        "features": {
+          "hog": 0.5224,
+          "hu_moments": 0.5523,
+          "contour": 0.71,
+          "skeleton": 0.3337,
+          "stroke_width": 0.9687,
+          "hesitation": 0.2085,
+          "curvature": 0.9932
+        }
+      },
+      {
+        "pair_id": "pair_16_cedar_w08_vs_w12",
+        "author": null,
+        "ref_image": "pair_16_ref_w08.png",
+        "questioned_image": "pair_16_random_w12.png",
+        "similarity_score": 0.3161,
+        "raw_score": 0.5641,
+        "calibrated_score": 0.3161,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.691,
+        "features": {
+          "hog": 0.4998,
+          "hu_moments": 0.9288,
+          "contour": 0.651,
+          "skeleton": 0.2342,
+          "stroke_width": 0.9338,
+          "hesitation": 0.201,
+          "curvature": 0.8789
+        }
+      },
+      {
+        "pair_id": "pair_17_cedar_w09_vs_w10",
+        "author": null,
+        "ref_image": "pair_17_ref_w09.png",
+        "questioned_image": "pair_17_random_w10.png",
+        "similarity_score": 0.2364,
+        "raw_score": 0.5227,
+        "calibrated_score": 0.2364,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.302,
+        "features": {
+          "hog": 0.536,
+          "hu_moments": 0.4094,
+          "contour": 0.6544,
+          "skeleton": 0.2246,
+          "stroke_width": 0.9319,
+          "hesitation": 0.1778,
+          "curvature": 0.8999
+        }
+      },
+      {
+        "pair_id": "pair_18_cedar_w09_vs_w01",
+        "author": null,
+        "ref_image": "pair_18_ref_w09.png",
+        "questioned_image": "pair_18_random_w01.png",
+        "similarity_score": 0.3232,
+        "raw_score": 0.5674,
+        "calibrated_score": 0.3232,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.104,
+        "features": {
+          "hog": 0.5997,
+          "hu_moments": 0.5483,
+          "contour": 0.781,
+          "skeleton": 0.1847,
+          "stroke_width": 0.9292,
+          "hesitation": 0.1926,
+          "curvature": 0.783
+        }
+      },
+      {
+        "pair_id": "pair_19_cedar_w10_vs_w11",
+        "author": null,
+        "ref_image": "pair_19_ref_w10.png",
+        "questioned_image": "pair_19_random_w11.png",
+        "similarity_score": 0.193,
+        "raw_score": 0.496,
+        "calibrated_score": 0.193,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.858,
+        "features": {
+          "hog": 0.4779,
+          "hu_moments": 0.4159,
+          "contour": 0.7698,
+          "skeleton": 0.3743,
+          "stroke_width": 0.5924,
+          "hesitation": 0.221,
+          "curvature": 0.7653
+        }
+      },
+      {
+        "pair_id": "pair_20_cedar_w10_vs_w02",
+        "author": null,
+        "ref_image": "pair_20_ref_w10.png",
+        "questioned_image": "pair_20_random_w02.png",
+        "similarity_score": 0.2625,
+        "raw_score": 0.5371,
+        "calibrated_score": 0.2625,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.011,
+        "features": {
+          "hog": 0.4806,
+          "hu_moments": 0.9469,
+          "contour": 0.5622,
+          "skeleton": 0.294,
+          "stroke_width": 0.7847,
+          "hesitation": 0.1831,
+          "curvature": 0.6646
+        }
+      },
+      {
+        "pair_id": "pair_21_cedar_w11_vs_w12",
+        "author": null,
+        "ref_image": "pair_21_ref_w11.png",
+        "questioned_image": "pair_21_random_w12.png",
+        "similarity_score": 0.3079,
+        "raw_score": 0.5601,
+        "calibrated_score": 0.3079,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.802,
+        "features": {
+          "hog": 0.5629,
+          "hu_moments": 0.5554,
+          "contour": 0.802,
+          "skeleton": 0.3581,
+          "stroke_width": 0.6515,
+          "hesitation": 0.201,
+          "curvature": 0.9743
+        }
+      },
+      {
+        "pair_id": "pair_22_cedar_w11_vs_w03",
+        "author": null,
+        "ref_image": "pair_22_ref_w11.png",
+        "questioned_image": "pair_22_random_w03.png",
+        "similarity_score": 0.2789,
+        "raw_score": 0.5457,
+        "calibrated_score": 0.2789,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.795,
+        "features": {
+          "hog": 0.5705,
+          "hu_moments": 0.6924,
+          "contour": 0.7553,
+          "skeleton": 0.2394,
+          "stroke_width": 0.7238,
+          "hesitation": 0.2407,
+          "curvature": 0.9668
+        }
+      },
+      {
+        "pair_id": "pair_23_cedar_w12_vs_w01",
+        "author": null,
+        "ref_image": "pair_23_ref_w12.png",
+        "questioned_image": "pair_23_random_w01.png",
+        "similarity_score": 0.4684,
+        "raw_score": 0.6303,
+        "calibrated_score": 0.4684,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 7.748,
+        "features": {
+          "hog": 0.6179,
+          "hu_moments": 0.9121,
+          "contour": 0.8424,
+          "skeleton": 0.2076,
+          "stroke_width": 0.9636,
+          "hesitation": 0.1926,
+          "curvature": 0.897
+        }
+      },
+      {
+        "pair_id": "pair_24_cedar_w12_vs_w04",
+        "author": null,
+        "ref_image": "pair_24_ref_w12.png",
+        "questioned_image": "pair_24_random_w04.png",
+        "similarity_score": 0.3728,
+        "raw_score": 0.59,
+        "calibrated_score": 0.3728,
+        "is_match_amber_th": false,
+        "tier": "RED",
+        "latency_ms": 8.046,
+        "features": {
+          "hog": 0.5857,
+          "hu_moments": 0.9132,
+          "contour": 0.8278,
+          "skeleton": 0.2712,
+          "stroke_width": 0.6779,
+          "hesitation": 0.1773,
+          "curvature": 0.8956
+        }
+      }
+    ]
+  }
+}
