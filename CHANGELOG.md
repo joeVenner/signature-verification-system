@@ -6,6 +6,9 @@ All notable changes to this project are documented here, following
 ## [Unreleased]
 
 ### Added
+- Live verification console at `/` (plain HTML/CSS/JS, `src/api/static/`): drop / browse / paste inputs, sample-pair picker, verdict badge, decision-aligned score gauge, log-odds margin, 8-stage pipeline view and in-memory session history.
+- `POST /api/v1/signature/inspect`: the `/signature/compare` result plus PNG renderings of the real pipeline intermediates, per-signal fusion contributions, thresholds and timing (`src/api/inspection.py`, `src/api/visuals.py`).
+- `GET /api/v1/samples` and `GET /api/v1/samples/{id}`: labelled sample gallery served only from `SIGVERIFY_SAMPLES_DIR`, server-generated ids only (`src/api/samples.py`).
 - Stroke-level comparison signals (`src/verification/stroke_geometry.py`): stroke direction along ICP-aligned strokes, writing slant, horizontal / vertical ink profiles (banded DTW) and pen width, fused with the keypoint signal. 1:1 skilled-forgery EER on an untouched 55-writer test slice 16.5% -> 9.3% (EXP-015).
 - `benchmark/build_cedar_eval.py` to build dev / test slices of full CEDAR; `--data-dir`, `--max-random` and `--max-random-per-query` options for the benchmark, fit and threshold scripts.
 - Explanation evidence for stroke direction, slant, horizontal / vertical rhythm and stroke width.
