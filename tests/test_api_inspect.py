@@ -92,8 +92,8 @@ class InspectEndpointTest(unittest.TestCase):
         self.assertEqual([s["name"] for s in fused], list(FUSION_SIGNALS))
         for s in fused:
             self.assertAlmostEqual(s["contribution"], s["weight"] * s["value"], places=4)
-        total = fusion["bias"] + sum(s["contribution"] for s in fused)
-        self.assertAlmostEqual(total, fusion["log_odds"], places=4)
+        self.assertAlmostEqual(fusion["contributions_total"], sum(s["contribution"] for s in fused), places=4)
+        self.assertAlmostEqual(fusion["bias"] + fusion["contributions_total"], fusion["log_odds"], places=5)
         self.assertAlmostEqual(fusion["log_odds"], self.response.json()["comparison"]["log_odds"], places=6)
         for s in fusion["signals"]:
             if not s["fused"]:

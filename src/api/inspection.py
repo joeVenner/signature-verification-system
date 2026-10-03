@@ -75,8 +75,9 @@ class SignalContribution(BaseModel):
 
 class FusionBreakdown(BaseModel):
     signals: List[SignalContribution]
+    contributions_total: float = Field(..., description="Sum of weight x value over the fused signals")
     bias: float
-    log_odds: float = Field(..., description="bias + sum of contributions, as computed by the fusion model")
+    log_odds: float = Field(..., description="bias + contributions_total, as computed by the fusion model")
 
 
 class AlignmentInspection(BaseModel):
@@ -173,7 +174,9 @@ def fusion_breakdown(pair: PairSimilarity, verifier: DeterministicVerifier) -> F
     rows += [SignalContribution(name=n, label=SIGNAL_LABELS.get(n, n.replace("_", " ").capitalize()),
                                 value=round(v, 6), fused=False)
              for n, v in sorted(pair.signals.items()) if n not in FUSION_SIGNALS]
-    return FusionBreakdown(signals=rows, bias=verifier.config.fusion.bias, log_odds=round(pair.fused_logit, 6))
+    total = sum(weights[n] * pair.signals[n] for n in FUSION_SIGNALS)
+    return FusionBreakdown(signals=rows, contributions_total=round(total, 6), bias=verifier.config.fusion.bias,
+                           log_odds=round(pair.fused_logit, 6))
 
 
 def alignment_inspection(ref: SignatureFeatures, que: SignatureFeatures, pair: PairSimilarity,
@@ -238,7 +241,7 @@ def inspect_signatures(reference: np.ndarray, questioned: np.ndarray,
         total = breakdown.bias + sum(verifier.config.fusion.signal_weights[n] * pair.signals[n] for n in FUSION_SIGNALS)
         consistency = Consistency(
             log_odds_matches=round(pair.fused_logit, LOG_ODDS_DECIMALS) == comparison.log_odds,
-            contributions_sum_matches=abs(total - pair.fused_logit) <= SUM_TOLERANCE,
+            contributions_sum_matches=bool(abs(total - pair.fused_logit) <= SUM_TOLERANCE),
         )
         alignment = alignment_inspection(ref_feats, que_feats, pair, verifier)
         if consistency.log_odds_matches and consistency.contributions_sum_matches:
