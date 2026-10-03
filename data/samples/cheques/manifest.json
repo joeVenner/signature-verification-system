@@ -1,0 +1,281 @@
+[
+  {
+    "filename": "cheque_workspace_example.png",
+    "category": "workspace_scan",
+    "resolution": [
+      3024,
+      1724
+    ],
+    "description": "Scanned standard blank check specimen from workspace root"
+  },
+  {
+    "filename": "cheque_real_scanned_01.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1578,
+      712
+    ],
+    "description": "Real scanned bank cheque 1 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_real_scanned_02.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1584,
+      699
+    ],
+    "description": "Real scanned bank cheque 2 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_real_scanned_03.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1587,
+      675
+    ],
+    "description": "Real scanned bank cheque 3 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_real_scanned_04.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1589,
+      691
+    ],
+    "description": "Real scanned bank cheque 4 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_real_scanned_05.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1560,
+      704
+    ],
+    "description": "Real scanned bank cheque 5 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_real_scanned_06.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1576,
+      701
+    ],
+    "description": "Real scanned bank cheque 6 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_real_scanned_07.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1587,
+      701
+    ],
+    "description": "Real scanned bank cheque 7 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_real_scanned_08.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1560,
+      712
+    ],
+    "description": "Real scanned bank cheque 8 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_real_scanned_09.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1552,
+      717
+    ],
+    "description": "Real scanned bank cheque 9 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_real_scanned_10.jpg",
+    "category": "real_bank_cheque",
+    "resolution": [
+      1544,
+      725
+    ],
+    "description": "Real scanned bank cheque 10 with background security tint, handwritten pay line, courtesy amount, date, and genuine signature",
+    "source": "souravsahaGITHUB1/Bank-Cheque-Validation-Dataset1"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9000.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9000 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9001.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9001 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9002.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9002 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9003.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9003 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9004.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9004 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9005.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9005 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9006.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9006 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9007.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9007 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9008.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9008 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_benchmark_synth_9009.jpg",
+    "category": "synthetic_benchmark",
+    "resolution": [
+      2365,
+      1100
+    ],
+    "description": "Benchmark bank cheque 9009 with guilloche microprint background, IFSC, MICR band, payee, and signature box",
+    "source": "alpha-brain/ocr-synthetic-cheque-datatset"
+  },
+  {
+    "filename": "cheque_procedural_pantograph_1001.png",
+    "category": "procedural_pantograph",
+    "resolution": [
+      2400,
+      1100
+    ],
+    "bank_name": "GLOBAL TRUST CHARTERED BANK",
+    "payee": "Apex Logistics & Freight Ltd.",
+    "amount": "45,820.50",
+    "date": "14-04-2026",
+    "embedded_signature_source": "/Users/mosaab/.mybot/workspace/signature_verification_system/data/samples/genuine_pairs/pair_01_cedar_w01_ref.png",
+    "description": "Procedural high-security bank cheque with multi-harmonic sinusoidal guilloche pantograph, microprinting, courtesy box, MICR transit line, and signature box"
+  },
+  {
+    "filename": "cheque_procedural_pantograph_1002.png",
+    "category": "procedural_pantograph",
+    "resolution": [
+      2400,
+      1100
+    ],
+    "bank_name": "CONTINENTAL RESERVE BANCSHARES",
+    "payee": "Vanguard Cloud Systems LLC",
+    "amount": "128,400.00",
+    "date": "29-09-2026",
+    "embedded_signature_source": "/Users/mosaab/.mybot/workspace/signature_verification_system/data/samples/genuine_pairs/pair_02_cedar_w01_ref.png",
+    "description": "Procedural high-security bank cheque with multi-harmonic sinusoidal guilloche pantograph, microprinting, courtesy box, MICR transit line, and signature box"
+  },
+  {
+    "filename": "cheque_procedural_pantograph_1003.png",
+    "category": "procedural_pantograph",
+    "resolution": [
+      2400,
+      1100
+    ],
+    "bank_name": "FEDERAL EMIRATES CLEARING BANK",
+    "payee": "Horizon Medical Equipment Trading",
+    "amount": "12,750.00",
+    "date": "05-08-2026",
+    "embedded_signature_source": "/Users/mosaab/.mybot/workspace/signature_verification_system/data/samples/skilled_forgeries/pair_01_cedar_w01_forgery01.png",
+    "description": "Procedural high-security bank cheque with multi-harmonic sinusoidal guilloche pantograph, microprinting, courtesy box, MICR transit line, and signature box"
+  },
+  {
+    "filename": "cheque_procedural_pantograph_1004.png",
+    "category": "procedural_pantograph",
+    "resolution": [
+      2400,
+      1100
+    ],
+    "bank_name": "PACIFIC MERCHANTS COMMERCIAL CORP",
+    "payee": "Sovereign Industrial Fabrication",
+    "amount": "315,920.85",
+    "date": "18-09-2026",
+    "embedded_signature_source": "/Users/mosaab/.mybot/workspace/signature_verification_system/data/samples/genuine_pairs/pair_00_synthetic_ref.png",
+    "description": "Procedural high-security bank cheque with multi-harmonic sinusoidal guilloche pantograph, microprinting, courtesy box, MICR transit line, and signature box"
+  },
+  {
+    "filename": "cheque_procedural_pantograph_1005.png",
+    "category": "procedural_pantograph",
+    "resolution": [
+      2400,
+      1100
+    ],
+    "bank_name": "NORDIC INTERBANK TREASURY",
+    "payee": "Solstice Energy Holdings Corp",
+    "amount": "84,000.00",
+    "date": "22-09-2026",
+    "embedded_signature_source": "/Users/mosaab/.mybot/workspace/signature_verification_system/data/samples/skilled_forgeries/pair_00_synthetic_questioned.png",
+    "description": "Procedural high-security bank cheque with multi-harmonic sinusoidal guilloche pantograph, microprinting, courtesy box, MICR transit line, and signature box"
+  }
+]

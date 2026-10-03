@@ -1,0 +1,227 @@
+[
+  {
+    "pair_id": "pair_00_synthetic",
+    "ref_author": "synthetic_writer_A",
+    "questioned_author": "synthetic_writer_B",
+    "ref_image": "pair_00_synthetic_ref.png",
+    "questioned_image": "pair_00_synthetic_questioned.png",
+    "forgery_style": "completely_different_author",
+    "source": "signature_compare_demo"
+  },
+  {
+    "pair_id": "pair_01_cedar_w01_vs_w02",
+    "ref_author": "cedar_writer_01",
+    "questioned_author": "cedar_writer_02",
+    "ref_image": "pair_01_ref_w01.png",
+    "questioned_image": "pair_01_random_w02.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_02_cedar_w01_vs_w05",
+    "ref_author": "cedar_writer_01",
+    "questioned_author": "cedar_writer_05",
+    "ref_image": "pair_02_ref_w01.png",
+    "questioned_image": "pair_02_random_w05.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_03_cedar_w02_vs_w03",
+    "ref_author": "cedar_writer_02",
+    "questioned_author": "cedar_writer_03",
+    "ref_image": "pair_03_ref_w02.png",
+    "questioned_image": "pair_03_random_w03.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_04_cedar_w02_vs_w06",
+    "ref_author": "cedar_writer_02",
+    "questioned_author": "cedar_writer_06",
+    "ref_image": "pair_04_ref_w02.png",
+    "questioned_image": "pair_04_random_w06.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_05_cedar_w03_vs_w04",
+    "ref_author": "cedar_writer_03",
+    "questioned_author": "cedar_writer_04",
+    "ref_image": "pair_05_ref_w03.png",
+    "questioned_image": "pair_05_random_w04.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_06_cedar_w03_vs_w07",
+    "ref_author": "cedar_writer_03",
+    "questioned_author": "cedar_writer_07",
+    "ref_image": "pair_06_ref_w03.png",
+    "questioned_image": "pair_06_random_w07.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_07_cedar_w04_vs_w05",
+    "ref_author": "cedar_writer_04",
+    "questioned_author": "cedar_writer_05",
+    "ref_image": "pair_07_ref_w04.png",
+    "questioned_image": "pair_07_random_w05.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_08_cedar_w04_vs_w08",
+    "ref_author": "cedar_writer_04",
+    "questioned_author": "cedar_writer_08",
+    "ref_image": "pair_08_ref_w04.png",
+    "questioned_image": "pair_08_random_w08.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_09_cedar_w05_vs_w06",
+    "ref_author": "cedar_writer_05",
+    "questioned_author": "cedar_writer_06",
+    "ref_image": "pair_09_ref_w05.png",
+    "questioned_image": "pair_09_random_w06.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_10_cedar_w05_vs_w09",
+    "ref_author": "cedar_writer_05",
+    "questioned_author": "cedar_writer_09",
+    "ref_image": "pair_10_ref_w05.png",
+    "questioned_image": "pair_10_random_w09.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_11_cedar_w06_vs_w07",
+    "ref_author": "cedar_writer_06",
+    "questioned_author": "cedar_writer_07",
+    "ref_image": "pair_11_ref_w06.png",
+    "questioned_image": "pair_11_random_w07.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_12_cedar_w06_vs_w10",
+    "ref_author": "cedar_writer_06",
+    "questioned_author": "cedar_writer_10",
+    "ref_image": "pair_12_ref_w06.png",
+    "questioned_image": "pair_12_random_w10.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_13_cedar_w07_vs_w08",
+    "ref_author": "cedar_writer_07",
+    "questioned_author": "cedar_writer_08",
+    "ref_image": "pair_13_ref_w07.png",
+    "questioned_image": "pair_13_random_w08.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_14_cedar_w07_vs_w11",
+    "ref_author": "cedar_writer_07",
+    "questioned_author": "cedar_writer_11",
+    "ref_image": "pair_14_ref_w07.png",
+    "questioned_image": "pair_14_random_w11.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_15_cedar_w08_vs_w09",
+    "ref_author": "cedar_writer_08",
+    "questioned_author": "cedar_writer_09",
+    "ref_image": "pair_15_ref_w08.png",
+    "questioned_image": "pair_15_random_w09.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_16_cedar_w08_vs_w12",
+    "ref_author": "cedar_writer_08",
+    "questioned_author": "cedar_writer_12",
+    "ref_image": "pair_16_ref_w08.png",
+    "questioned_image": "pair_16_random_w12.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_17_cedar_w09_vs_w10",
+    "ref_author": "cedar_writer_09",
+    "questioned_author": "cedar_writer_10",
+    "ref_image": "pair_17_ref_w09.png",
+    "questioned_image": "pair_17_random_w10.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_18_cedar_w09_vs_w01",
+    "ref_author": "cedar_writer_09",
+    "questioned_author": "cedar_writer_01",
+    "ref_image": "pair_18_ref_w09.png",
+    "questioned_image": "pair_18_random_w01.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_19_cedar_w10_vs_w11",
+    "ref_author": "cedar_writer_10",
+    "questioned_author": "cedar_writer_11",
+    "ref_image": "pair_19_ref_w10.png",
+    "questioned_image": "pair_19_random_w11.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_20_cedar_w10_vs_w02",
+    "ref_author": "cedar_writer_10",
+    "questioned_author": "cedar_writer_02",
+    "ref_image": "pair_20_ref_w10.png",
+    "questioned_image": "pair_20_random_w02.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_21_cedar_w11_vs_w12",
+    "ref_author": "cedar_writer_11",
+    "questioned_author": "cedar_writer_12",
+    "ref_image": "pair_21_ref_w11.png",
+    "questioned_image": "pair_21_random_w12.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_22_cedar_w11_vs_w03",
+    "ref_author": "cedar_writer_11",
+    "questioned_author": "cedar_writer_03",
+    "ref_image": "pair_22_ref_w11.png",
+    "questioned_image": "pair_22_random_w03.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_23_cedar_w12_vs_w01",
+    "ref_author": "cedar_writer_12",
+    "questioned_author": "cedar_writer_01",
+    "ref_image": "pair_23_ref_w12.png",
+    "questioned_image": "pair_23_random_w01.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_24_cedar_w12_vs_w04",
+    "ref_author": "cedar_writer_12",
+    "questioned_author": "cedar_writer_04",
+    "ref_image": "pair_24_ref_w12.png",
+    "questioned_image": "pair_24_random_w04.png",
+    "forgery_style": "different_writer_random_forgery",
+    "source": "CEDAR_offline_benchmark"
+  }
+]

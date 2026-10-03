@@ -1,0 +1,18 @@
+# Runtime dependencies for the signature verification system.
+#
+# NOTE ON NUMPY: opencv-python-headless >= 5.x requires numpy >= 2, which is
+# incompatible with the numpy 1.26 that scikit-image 0.24 is built against in a
+# conda base env. 4.10.0.84 is the newest release whose wheels still accept
+# numpy 1.x, so it is pinned deliberately — do not bump it without also moving
+# numpy and scikit-image together.
+numpy>=1.26,<2
+opencv-python-headless==4.10.0.84
+scikit-image>=0.24,<0.25
+
+fastapi>=0.115
+pydantic>=2.7
+uvicorn>=0.30
+python-multipart>=0.0.9   # required by FastAPI for the multipart/form-data upload endpoints
+
+rich>=13.7
+pillow>=10.4,<11   # header-only image size checks in the API (decompression-bomb guard)

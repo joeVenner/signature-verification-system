@@ -1,0 +1,39 @@
+{
+  "dataset_name": "Signature and Cheque Verification Benchmark Dataset",
+  "base_path": "signature_verification_system/data/samples",
+  "categories": {
+    "genuine_pairs": {
+      "path": "genuine_pairs/",
+      "total_pairs": 25,
+      "total_images": 50,
+      "description": "Intra-writer genuine variants (same author, different signing turns). Contains CEDAR benchmark writers and synthetic reference variants."
+    },
+    "skilled_forgeries": {
+      "path": "skilled_forgeries/",
+      "total_pairs": 25,
+      "total_images": 50,
+      "description": "Attempted forgeries of same name/style. Contains CEDAR skilled forgeries and envelope-mimic synthetic forgeries."
+    },
+    "random_forgeries": {
+      "path": "random_forgeries/",
+      "total_pairs": 25,
+      "total_images": 50,
+      "description": "Different people entirely (cross-writer pairs). Contains CEDAR cross-author signatures and different synthetic authors."
+    },
+    "cheques": {
+      "path": "cheques/",
+      "total_images": 26,
+      "description": "Full cheques with background pantograph, security microprinting, payee line, date box, courtesy amount, MICR line, and signature box.",
+      "subtypes": {
+        "real_bank_cheque": 10,
+        "synthetic_benchmark": 10,
+        "procedural_pantograph": 5,
+        "workspace_scan": 1
+      }
+    }
+  },
+  "total_signature_pairs": 75,
+  "total_signature_images": 150,
+  "total_cheque_images": 26,
+  "total_images_in_dataset": 176
+}

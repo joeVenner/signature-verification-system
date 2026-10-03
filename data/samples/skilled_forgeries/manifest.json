@@ -1,0 +1,250 @@
+[
+  {
+    "pair_id": "pair_00_synthetic",
+    "target_author": "synthetic_writer_A",
+    "ref_image": "pair_00_synthetic_ref.png",
+    "questioned_image": "pair_00_synthetic_questioned.png",
+    "forgery_style": "synthetic_envelope_mimic",
+    "source": "signature_compare_demo"
+  },
+  {
+    "pair_id": "pair_01_cedar_w01_f01",
+    "target_author": "cedar_writer_01",
+    "ref_image": "pair_01_cedar_w01_ref.png",
+    "questioned_image": "pair_01_cedar_w01_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_02_cedar_w01_f02",
+    "target_author": "cedar_writer_01",
+    "ref_image": "pair_02_cedar_w01_ref.png",
+    "questioned_image": "pair_02_cedar_w01_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_03_cedar_w02_f01",
+    "target_author": "cedar_writer_02",
+    "ref_image": "pair_03_cedar_w02_ref.png",
+    "questioned_image": "pair_03_cedar_w02_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_04_cedar_w02_f02",
+    "target_author": "cedar_writer_02",
+    "ref_image": "pair_04_cedar_w02_ref.png",
+    "questioned_image": "pair_04_cedar_w02_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_05_cedar_w03_f01",
+    "target_author": "cedar_writer_03",
+    "ref_image": "pair_05_cedar_w03_ref.png",
+    "questioned_image": "pair_05_cedar_w03_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_06_cedar_w03_f02",
+    "target_author": "cedar_writer_03",
+    "ref_image": "pair_06_cedar_w03_ref.png",
+    "questioned_image": "pair_06_cedar_w03_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_07_cedar_w04_f01",
+    "target_author": "cedar_writer_04",
+    "ref_image": "pair_07_cedar_w04_ref.png",
+    "questioned_image": "pair_07_cedar_w04_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_08_cedar_w04_f02",
+    "target_author": "cedar_writer_04",
+    "ref_image": "pair_08_cedar_w04_ref.png",
+    "questioned_image": "pair_08_cedar_w04_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_09_cedar_w05_f01",
+    "target_author": "cedar_writer_05",
+    "ref_image": "pair_09_cedar_w05_ref.png",
+    "questioned_image": "pair_09_cedar_w05_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_10_cedar_w05_f02",
+    "target_author": "cedar_writer_05",
+    "ref_image": "pair_10_cedar_w05_ref.png",
+    "questioned_image": "pair_10_cedar_w05_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_11_cedar_w06_f01",
+    "target_author": "cedar_writer_06",
+    "ref_image": "pair_11_cedar_w06_ref.png",
+    "questioned_image": "pair_11_cedar_w06_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_12_cedar_w06_f02",
+    "target_author": "cedar_writer_06",
+    "ref_image": "pair_12_cedar_w06_ref.png",
+    "questioned_image": "pair_12_cedar_w06_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_13_cedar_w07_f01",
+    "target_author": "cedar_writer_07",
+    "ref_image": "pair_13_cedar_w07_ref.png",
+    "questioned_image": "pair_13_cedar_w07_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_14_cedar_w07_f02",
+    "target_author": "cedar_writer_07",
+    "ref_image": "pair_14_cedar_w07_ref.png",
+    "questioned_image": "pair_14_cedar_w07_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_15_cedar_w08_f01",
+    "target_author": "cedar_writer_08",
+    "ref_image": "pair_15_cedar_w08_ref.png",
+    "questioned_image": "pair_15_cedar_w08_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_16_cedar_w08_f02",
+    "target_author": "cedar_writer_08",
+    "ref_image": "pair_16_cedar_w08_ref.png",
+    "questioned_image": "pair_16_cedar_w08_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_17_cedar_w09_f01",
+    "target_author": "cedar_writer_09",
+    "ref_image": "pair_17_cedar_w09_ref.png",
+    "questioned_image": "pair_17_cedar_w09_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_18_cedar_w09_f02",
+    "target_author": "cedar_writer_09",
+    "ref_image": "pair_18_cedar_w09_ref.png",
+    "questioned_image": "pair_18_cedar_w09_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_19_cedar_w10_f01",
+    "target_author": "cedar_writer_10",
+    "ref_image": "pair_19_cedar_w10_ref.png",
+    "questioned_image": "pair_19_cedar_w10_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_20_cedar_w10_f02",
+    "target_author": "cedar_writer_10",
+    "ref_image": "pair_20_cedar_w10_ref.png",
+    "questioned_image": "pair_20_cedar_w10_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_21_cedar_w11_f01",
+    "target_author": "cedar_writer_11",
+    "ref_image": "pair_21_cedar_w11_ref.png",
+    "questioned_image": "pair_21_cedar_w11_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_22_cedar_w11_f02",
+    "target_author": "cedar_writer_11",
+    "ref_image": "pair_22_cedar_w11_ref.png",
+    "questioned_image": "pair_22_cedar_w11_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_23_cedar_w12_f01",
+    "target_author": "cedar_writer_12",
+    "ref_image": "pair_23_cedar_w12_ref.png",
+    "questioned_image": "pair_23_cedar_w12_forgery01.png",
+    "ref_turn": 1,
+    "forgery_turn": 1,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  },
+  {
+    "pair_id": "pair_24_cedar_w12_f02",
+    "target_author": "cedar_writer_12",
+    "ref_image": "pair_24_cedar_w12_ref.png",
+    "questioned_image": "pair_24_cedar_w12_forgery02.png",
+    "ref_turn": 1,
+    "forgery_turn": 2,
+    "forgery_style": "practiced_skilled_forgery",
+    "source": "CEDAR_offline_benchmark"
+  }
+]
