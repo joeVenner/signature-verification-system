@@ -190,8 +190,10 @@ def alignment_inspection(ref: SignatureFeatures, que: SignatureFeatures, pair: P
         ref.stroke.skeleton_points, que.stroke.skeleton_points, que.normalized.ink, matrix,
         p.keypoint_canvas_width, p.keypoint_canvas_height)
     if trusted:
-        description = (f"Reference strokes mapped with the RANSAC keypoint transform ({k.inliers} inliers), "
-                       "which seeds the stroke-direction alignment; the ICP refinement on top of it is not shown.")
+        description = (f"Reference strokes mapped with the RANSAC keypoint transform ({k.inliers} inliers). "
+                       "It is the transform tried for the aligned layout score and one of two starting points "
+                       "(with the identity) for the stroke-direction alignment; which start won and the "
+                       "ICP-refined result are not exposed by the engine.")
         rotation = round(float(np.degrees(np.arctan2(matrix[1, 0], matrix[0, 0]))), 2)
         scale = round(float(np.hypot(matrix[0, 0], matrix[1, 0])), 4)
         rows = [[round(float(v), 6) for v in row] for row in matrix]
