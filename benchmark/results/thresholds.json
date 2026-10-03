@@ -1,0 +1,50 @@
+{
+ "multi": {
+  "cv_heldout_counts": {
+   "genuine": {
+    "accept": 42,
+    "n": 48,
+    "reject": 4
+   },
+   "random": {
+    "accept": 0,
+    "n": 960,
+    "reject": 957
+   },
+   "skilled": {
+    "accept": 0,
+    "n": 96,
+    "reject": 76
+   }
+  },
+  "production": {
+   "accept": 4.65025100495529,
+   "hard_reject": 0.6254067463651707,
+   "reject": 1.4271491766726352
+  }
+ },
+ "single": {
+  "cv_heldout_counts": {
+   "genuine": {
+    "accept": 24,
+    "n": 73,
+    "reject": 3
+   },
+   "random": {
+    "accept": 2,
+    "n": 482,
+    "reject": 473
+   },
+   "skilled": {
+    "accept": 2,
+    "n": 98,
+    "reject": 46
+   }
+  },
+  "production": {
+   "accept": 13.93803614613048,
+   "hard_reject": -3.833874012575848,
+   "reject": -0.27749666912537263
+  }
+ }
+}
