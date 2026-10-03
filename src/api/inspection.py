@@ -10,6 +10,7 @@ show a decomposition that does not add up to the decision.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Dict, List, Literal, Optional
 
@@ -31,6 +32,9 @@ from signature_verification_system.src.verification.similarity import PairSimila
 
 LOG_ODDS_DECIMALS = 6   # precision of SignatureComparison.log_odds
 SUM_TOLERANCE = 1e-9
+EXTRACTION_FAILED_MESSAGE = "No signature could be isolated in this image."
+
+LOGGER = logging.getLogger(__name__)
 
 SIGNAL_LABELS: Dict[str, str] = {
     "keypoint": "Keypoint correspondence",
@@ -136,8 +140,10 @@ class SignatureInspection(BaseModel):
 def _features_or_error(image: np.ndarray, verifier: DeterministicVerifier) -> tuple[Optional[SignatureFeatures], Optional[str]]:
     try:
         return extract_features(image, verifier.config.representation), None
-    except ValueError as exc:
-        return None, str(exc)
+    except ValueError:
+        # The exception text is logged, never returned: a future message could expose internals.
+        LOGGER.info("feature extraction failed during inspect", exc_info=True)
+        return None, EXTRACTION_FAILED_MESSAGE
 
 
 def inspect_image(image: np.ndarray, feats: Optional[SignatureFeatures], error: Optional[str],

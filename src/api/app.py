@@ -69,6 +69,11 @@ MAX_IMAGE_PIXELS = 50_000_000
 MAX_ADDITIONAL_SPECIMENS = 9
 MAX_COMPARE_REFERENCES = 10
 MAX_REQUEST_BYTES = 64 * 1024 * 1024   # whole-request cap (Content-Length); enforce at the proxy too
+# The console renders images from data:/blob: URLs and loads only Google Fonts; nothing else is allowed.
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; img-src 'self' data: blob:; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com"
+)
 MAX_TEXT_FIELD = 64
 CURRENCY_PATTERN = r"^[A-Z]{3}$"
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -346,6 +351,13 @@ def create_app(
         if declared is not None and (not declared.isdigit() or int(declared) > MAX_REQUEST_BYTES):
             return JSONResponse(status_code=413, content={"detail": "Request body too large."})
         return await call_next(request)
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        return response
 
     @app.exception_handler(ValueError)
     async def value_error_handler(_: Request, __: ValueError) -> JSONResponse:
