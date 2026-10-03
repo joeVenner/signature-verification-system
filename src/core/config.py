@@ -2,7 +2,15 @@
 """
 
 from typing import Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+# Signals fused into the match log-odds, in canonical order (see FusionModel).
+# "layout" is still computed and reported, but carries no weight: it is redundant
+# with slant + stroke direction and got a (meaningless) negative weight in EXP-015.
+FUSION_SIGNALS = (
+    "keypoint", "stroke_direction", "slant", "column_profile", "row_profile", "stroke_width",
+)
 
 
 class IQAThresholds(BaseModel):
@@ -41,14 +49,14 @@ class DecisionThresholds(BaseModel):
     """
     accept_margin_logit: float = Field(default=1.0)
     reject_genuine_quantile: float = Field(default=0.05)
-    single_accept_logit: float = Field(default=13.9380)
-    single_reject_logit: float = Field(default=-0.2775)
-    single_hard_reject_logit: float = Field(default=-3.8339)
-    multi_accept_logit: float = Field(default=4.6503)
-    multi_reject_logit: float = Field(default=1.4271)
-    multi_hard_reject_logit: float = Field(default=0.6254)
+    single_accept_logit: float = Field(default=6.4721)
+    single_reject_logit: float = Field(default=-0.3264)
+    single_hard_reject_logit: float = Field(default=-6.5919)
+    multi_accept_logit: float = Field(default=7.2585)
+    multi_reject_logit: float = Field(default=2.5302)
+    multi_hard_reject_logit: float = Field(default=0.2738)
     selected_on: str = Field(
-        default="benchmark/select_thresholds.py on CEDAR-12w (single: 1:1 protocol; multi: 3-specimen protocol)"
+        default="benchmark/select_thresholds.py on CEDAR-55w dev split (single: 1:1 protocol; multi: 3-specimen protocol)"
     )
 
 
@@ -74,6 +82,26 @@ class PreprocessingParams(BaseModel):
     pantograph_min_speckle_area: int = Field(default=6, description="Min pixel area to filter out isolated dots")
 
 
+class StrokeParams(BaseModel):
+    """Stroke-level signals (see src/verification/stroke_geometry.py, EXP-015)."""
+    ink_threshold: float = Field(default=0.35, description="Normalised darkness above which a pixel is stroke")
+    orientation_radius: float = Field(default=6.0, description="Neighbourhood radius (canvas px) for local stroke direction")
+    profile_columns: int = Field(default=256, description="Aspect-free canvas width for ink profiles")
+    profile_rows: int = Field(default=128, description="Aspect-free canvas height for ink profiles")
+    profile_blur_sigma: float = Field(default=2.0, description="Smoothing of the 1-D ink profiles")
+    slant_blur_sigma: float = Field(default=1.5, description="Blur before the global slant histogram")
+    icp_iterations: int = Field(default=6, description="Trimmed ICP iterations per starting transform")
+    icp_trim_quantile: float = Field(default=0.8, description="Fraction of closest correspondences used per ICP step")
+    icp_min_step_scale: float = Field(default=0.85, description="Per-step scale clamp (low)")
+    icp_max_step_scale: float = Field(default=1.18, description="Per-step scale clamp (high)")
+    icp_point_stride: int = Field(default=4, description="Use every n-th skeleton point while refining the alignment")
+    chamfer_tolerance_px: float = Field(default=10.0, description="Truncation distance for the alignment quality check")
+    direction_tolerance_px: float = Field(default=6.0, description="Max distance for two strokes to count as corresponding")
+    column_dtw_length: int = Field(default=128, description="Resampled length of the horizontal profile for DTW")
+    row_dtw_length: int = Field(default=64, description="Resampled length of the vertical profile for DTW")
+    dtw_band_fraction: float = Field(default=0.1, description="Sakoe-Chiba band as a fraction of profile length")
+
+
 class RepresentationParams(BaseModel):
     """Descriptor geometry for the v3 verifier (see src/verification/features.py)."""
     shape_canvas_width: int = Field(default=256, description="Aspect-normalised canvas width for global shape")
@@ -91,20 +119,42 @@ class RepresentationParams(BaseModel):
     align_min_scale: float = Field(default=0.6, description="Min plausible relative scale")
     align_max_scale: float = Field(default=1.6, description="Max plausible relative scale")
     align_blur_sigma: float = Field(default=4.0, description="Blur for the aligned shape descriptor (2x canvas)")
+    stroke: StrokeParams = Field(default_factory=StrokeParams)
 
 
 class FusionModel(BaseModel):
-    """Logistic fusion of similarities -> match probability (equal priors).
+    """Logistic fusion of similarity signals -> match log-odds (equal priors).
 
     Fitted writer-independently by benchmark/fit_fusion.py; never hand-tuned.
+    `signal_weights` is keyed by `FUSION_SIGNALS`.
+
+    Slant note: the fit (1.877) used the raw circular EMD distance (range 0..9); the
+    shipped signal is normalised to [0, 1] by dividing by 9, which is the exact affine
+    map slant_new = (8 + slant_fit) / 9. Weight 16.893 = 9 x 1.877 and bias
+    -39.985 = -24.969 - 8 x 1.877 therefore reproduce the fitted log-odds exactly.
     """
-    shape_weight: float = Field(default=22.948)
-    keypoint_weight: float = Field(default=38.455)
-    bias: float = Field(default=-20.058)
+    signal_weights: Dict[str, float] = Field(default_factory=lambda: {
+        "keypoint": 14.417,
+        "stroke_direction": 9.706,
+        "slant": 16.893,
+        "column_profile": 8.606,
+        "row_profile": 9.023,
+        "stroke_width": 7.173,
+    })
+    bias: float = Field(default=-39.985)
     fitted_on: str = Field(
-        default="CEDAR-12w 1:1 protocol (73 gen / 98 skilled / 1058 random), balanced L2-LR C=1",
+        default="CEDAR-55w dev split (writers 1-55, genuine 1-6, forgeries 1-6), 1:1 protocol, balanced L2-LR C=0.1",
         description="Provenance of the coefficients",
     )
+
+    @field_validator("signal_weights")
+    @classmethod
+    def _weights_cover_fusion_signals(cls, weights: Dict[str, float]) -> Dict[str, float]:
+        """Fail at construction, not at the first comparison, if a signal has no weight."""
+        missing = sorted(set(FUSION_SIGNALS) - set(weights))
+        if missing:
+            raise ValueError(f"signal_weights is missing {missing}")
+        return weights
 
 
 class SystemConfig(BaseModel):
