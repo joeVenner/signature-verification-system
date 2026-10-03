@@ -1,5 +1,144 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><title>Signature Verification Console</title></head>
-<body><p>Console UI not built yet. API docs: <a href="/docs">/docs</a></p></body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Signature Verification Console</title>
+  <meta name="description" content="1:1 signature verification: reference specimen against the signature to verify.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="console.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23111'/%3E%3Cpath d='M7 20c3-7 5-9 6-6s-2 7 1 6 4-9 6-8-1 7 2 6 3-2 3-2' stroke='%23fff' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6"/><path d="M7 20c3-7 5-9 6-6s-2 7 1 6 4-9 6-8-1 7 2 6 3-2 3-2"/></svg>
+        <div>
+          <div class="brand-name">Signature Verification</div>
+          <div class="brand-sub">1:1 specimen comparison &middot; deterministic CPU engine</div>
+        </div>
+      </div>
+      <div class="engine" id="engine" aria-live="polite">
+        <span class="dot" id="engine-dot"></span><span id="engine-text">Connecting&hellip;</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div class="primary">
+      <!-- ============================ Inputs ============================ -->
+      <section class="card" aria-labelledby="inputs-title">
+        <div class="card-head">
+          <h2 id="inputs-title">New verification</h2>
+          <p class="hint">Drop, browse or paste an image (<kbd>Ctrl</kbd>/<kbd>&#8984;</kbd>&nbsp;<kbd>V</kbd>). PNG, JPEG, TIFF or BMP, up to 20&nbsp;MB.</p>
+        </div>
+
+        <div class="zones">
+          <div class="zone" data-role="reference" tabindex="0" role="button" aria-describedby="zone-ref-help">
+            <div class="zone-label"><span class="zone-index">A</span>Reference specimen</div>
+            <div class="zone-body">
+              <img class="zone-preview" alt="" hidden>
+              <div class="zone-empty" id="zone-ref-help">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+                <span>Drop the account holder's specimen, or press <kbd>Enter</kbd> to browse</span>
+              </div>
+            </div>
+            <div class="zone-foot"><span class="zone-file">No file</span><button type="button" class="link zone-clear" hidden>Clear</button></div>
+            <input type="file" accept="image/png,image/jpeg,image/tiff,image/bmp" hidden>
+          </div>
+
+          <div class="zone" data-role="questioned" tabindex="0" role="button" aria-describedby="zone-que-help">
+            <div class="zone-label"><span class="zone-index">B</span>Signature to verify</div>
+            <div class="zone-body">
+              <img class="zone-preview" alt="" hidden>
+              <div class="zone-empty" id="zone-que-help">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+                <span>Drop the questioned signature, or press <kbd>Enter</kbd> to browse</span>
+              </div>
+            </div>
+            <div class="zone-foot"><span class="zone-file">No file</span><button type="button" class="link zone-clear" hidden>Clear</button></div>
+            <input type="file" accept="image/png,image/jpeg,image/tiff,image/bmp" hidden>
+          </div>
+        </div>
+
+        <div class="actions">
+          <div class="samples" id="samples" hidden>
+            <label for="sample-select" class="field-label">Test sample</label>
+            <div class="sample-row">
+              <select id="sample-select"></select>
+              <button type="button" class="btn-secondary" id="sample-next" title="Load the next sample pair (Alt+N)">Next sample <kbd>Alt</kbd><kbd>N</kbd></button>
+            </div>
+          </div>
+          <div class="verify-wrap">
+            <button type="button" class="btn-primary" id="verify" disabled>
+              <span class="btn-label">Verify signature</span>
+              <span class="spinner" aria-hidden="true"></span>
+            </button>
+            <span class="kbd-hint"><kbd>Ctrl</kbd>/<kbd>&#8984;</kbd> <kbd>Enter</kbd></span>
+          </div>
+        </div>
+        <div class="alert" id="alert" role="alert" hidden></div>
+      </section>
+
+      <!-- ============================ Result ============================ -->
+      <section class="card result" id="result" aria-labelledby="result-title" hidden>
+        <h2 id="result-title" class="visually-hidden">Verification result</h2>
+        <div class="verdict-row">
+          <div class="verdict-main">
+            <div class="badge" id="badge"><span class="badge-icon" id="badge-icon" aria-hidden="true"></span><span id="badge-text"></span></div>
+            <div class="verdict-full" id="verdict-full"></div>
+            <p class="margin-statement" id="margin"></p>
+            <div class="dataset-label" id="dataset-label" hidden></div>
+          </div>
+          <div class="score-block">
+            <div class="score-caption">Similarity score</div>
+            <div class="score-value"><span id="score">&ndash;</span><span class="score-max">/ 100</span></div>
+            <div class="gauge" id="gauge" aria-hidden="true">
+              <div class="gauge-track">
+                <div class="gauge-zone zone-no"></div><div class="gauge-zone zone-review"></div><div class="gauge-zone zone-match"></div>
+              </div>
+              <div class="gauge-marker" id="gauge-marker"></div>
+              <div class="gauge-ticks" id="gauge-ticks"></div>
+            </div>
+          </div>
+        </div>
+        <dl class="facts" id="facts"></dl>
+      </section>
+
+      <!-- ============================ Pipeline ============================ -->
+      <section class="pipeline" id="pipeline" aria-labelledby="pipeline-title" hidden>
+        <div class="section-head">
+          <h2 id="pipeline-title">How this decision was made</h2>
+          <p class="hint">Every image and number below is an intermediate of this exact run.</p>
+        </div>
+        <ol class="stages" id="stages"></ol>
+      </section>
+    </div>
+
+    <!-- ============================ History ============================ -->
+    <aside class="history card" aria-labelledby="history-title">
+      <div class="card-head">
+        <h2 id="history-title">Session history</h2>
+        <p class="hint">Last runs in this tab. Not stored.</p>
+      </div>
+      <ol class="history-list" id="history"><li class="history-empty">No verifications yet.</li></ol>
+    </aside>
+  </main>
+
+  <template id="stage-template">
+    <li class="stage">
+      <div class="stage-rail"><span class="stage-num"></span></div>
+      <div class="stage-body">
+        <h3 class="stage-title"></h3>
+        <p class="stage-desc"></p>
+        <div class="stage-content"></div>
+      </div>
+    </li>
+  </template>
+
+  <script src="console.js"></script>
+</body>
 </html>
