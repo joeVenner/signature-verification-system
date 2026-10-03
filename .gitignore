@@ -1,0 +1,30 @@
+# Python / tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.DS_Store
+
+# Local state: the audit ledger may contain (masked) account data
+audit_ledger.db
+audit_ledger.jsonl
+*.db
+*.jsonl
+
+# Dataset images are NOT redistributed (CEDAR licence; third-party cheque scans).
+# Manifests and the dataset README are kept so the layout can be reproduced.
+data/samples/**/*.png
+data/samples/**/*.jpg
+data/samples/**/*.jpeg
+data/samples/**/*.tif
+data/samples/**/*.tiff
+
+# Generated output
+demo_output/
+benchmark/results/*.runtime.json
+
+# Agent-only working files (never committed)
+CLAUDE.md
+.agent/
+.claude/
