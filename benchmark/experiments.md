@@ -1102,3 +1102,48 @@ differences below ~2 EER points are within noise.
   cost ~2-3x the pair time. Production code, fusion, thresholds and evidence reference are
   unchanged (val 5.24 stands; not re-scored). If revisited: reuse the shipped alignment
   instead of recomputing it, and fix σ beforehand.
+
+## EXP-021 — Local stroke properties at ICP-matched points (rejected; production unchanged)
+
+* **Hypothesis:** `pressure_pattern` (EXP-017/019) works because forgers copy shape, not
+  where the pen presses. Other local properties read at the *same* matched stroke points
+  might carry the same kind of writer-specific evidence.
+* **Method (dev only):** harmonized dev features cached once; correspondences rebuilt
+  exactly as production (`align_strokes` + `_correspond`, keypoint seed via `_trusted_seed`,
+  both directions). Check: recomputed max(fwd, rev) pressure equals the shipped signal
+  (max abs diff 0.0); baseline reproduces CV skilled EER **9.59%**, AUC 0.9618, random
+  1.70%, folds 8.38 / 9.15. Per-skeleton-point attributes (hyper-parameters fixed before
+  any fused run): width = 2 x distance transform, along-stroke mean r 4; curvature = mean
+  |delta orientation| / distance over neighbours r 8; linearity = PCA lambda2 / (lambda1 +
+  lambda2), r 8; darkness gradient = |slope of along-stroke darkness along the local
+  tangent|, r 6; coarse pressure = blur sigma 2, along-stroke r 12; joint = rank(darkness)
+  + rank(width). Signal = Spearman correlation at matched points, raw or x coverage, max
+  over both directions. Fused = signal added to the shipped 8, `fit_fusion._fit`,
+  writer-disjoint 2-fold CV (825 genuine / 1980 skilled / 6000 random).
+  Session test: 2970 different-writer genuine-genuine vs 2970 genuine-forgery pairs.
+
+  | candidate | form | single AUC | session AUC | fused EER | folds | fold weights |
+  |---|---|---|---|---|---|---|
+  | width | raw / cov | 0.859 / 0.906 | 0.486 / 0.491 | 9.45 / 9.59 | 8.55/9.60, 8.77/9.37 | -2.06/1.52, -2.94/2.77 |
+  | curvature | raw / cov | 0.813 / 0.873 | 0.470 / 0.472 | 9.36 / 9.34 | 8.55/9.15, 8.55/9.15 | 0.67/-0.72, 0.84/-2.27 |
+  | linearity | raw / cov | 0.794 / 0.862 | 0.478 / 0.480 | 9.56 / 9.47 | 8.33/9.15, 8.33/8.87 | 0.33/0.09, 0.39/-0.83 |
+  | darkness gradient | raw / cov | 0.828 / 0.888 | 0.490 / 0.490 | 9.34 / 9.45 | 8.55/9.09, 8.60/9.20 | 1.27/2.50, 2.80/3.90 |
+  | coarse pressure | raw / cov | 0.877 / 0.916 | 0.492 / 0.498 | 9.45 / 9.47 | 8.33/8.64, 8.55/9.15 | 0.74/2.61, 1.32/5.37 |
+  | joint width+pressure | raw / cov | 0.874 / 0.916 | 0.494 / 0.498 | 9.56 / 9.59 | 8.82/9.37, 8.60/9.37 | -2.21/1.78, -3.21/4.11 |
+  | all six added | cov / raw | | | 9.34 / 9.56 | 8.87/9.15, 9.04/9.15 | mixed signs |
+  | joint replaces pressure | cov | | | 10.06 | 9.57/10.10 | |
+
+  (Shipped pressure for reference: single AUC 0.921 cov, session 0.502.) 15
+  configurations in all: the 12 single additions were fixed beforehand; the last three
+  rows were added after seeing them. No shortcut (session AUC 0.47-0.50), but no candidate reaches the
+  0.5 pt bar; the best gain is 0.25 pt. Width (a re-test of EXP-017's "width rank
+  pattern", now symmetric) and the joint pattern get opposite-sign weights across folds:
+  redundant with pressure x coverage. Writer bootstrap (200 resamples) of the gain: curvature
+  cov mean 0.13 pt, 90% -0.31..0.63; darkness gradient raw 0.07, -0.63..0.61; cov 0.00,
+  -0.68..0.61.
+* **Cost (not shipped):** attributes ~30 ms per image serial (Python per-point loops);
+  the correlation reads reuse the shipped correspondence.
+* **Decision: rejected.** Like EXP-017/020, local measures at matched points are strong
+  alone (AUC 0.86-0.92) but carry no information beyond direction x coverage and
+  pressure x coverage. Production code, fusion, thresholds and evidence reference are
+  unchanged (val 5.24 stands; not re-scored).
