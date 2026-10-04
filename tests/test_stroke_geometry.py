@@ -28,12 +28,17 @@ from signature_verification_system.src.verification.similarity import (
     fuse_signals,
 )
 from signature_verification_system.src.verification.stroke_geometry import (
+    CURVATURE_BINS,
+    CURVATURE_MAX_EMD,
     MAX_SKELETON_POINTS,
     SLANT_BINS,
     SLANT_MAX_EMD,
     StrokeGeometry,
+    _along_stroke_mean,
     _banded_dtw,
     _circular_emd,
+    _linear_emd,
+    _rank_correlation,
     _similarity_fit,
     direction_signal,
     extract_stroke_geometry,
@@ -204,6 +209,101 @@ class TestAlignmentPrimitives(unittest.TestCase):
         shifted = np.roll(x, 3)
         self.assertEqual(_banded_dtw(x, x, 8), 0.0)
         self.assertLess(_banded_dtw(x, shifted, 8), float(np.abs(x - shifted).sum() / (2 * len(x))))
+
+
+class TestStrokeQualitySignals(unittest.TestCase):
+    """EXP-017: ink-darkness pattern along matching strokes, and contour curvature."""
+
+    def test_new_descriptors_have_the_declared_shapes(self):
+        g = geometry_of(draw_signature(30))
+        self.assertEqual(len(g.point_darkness), len(g.skeleton_points))
+        self.assertTrue(np.all((g.point_darkness >= 0.0) & (g.point_darkness <= 1.0)))
+        self.assertEqual(g.curvature_histogram.shape, (CURVATURE_BINS,))
+        self.assertAlmostEqual(float(g.curvature_histogram.sum()), 1.0, places=6)
+
+    def test_empty_ink_gives_empty_quality_descriptors(self):
+        g = extract_stroke_geometry(np.zeros((40, 80)), PARAMS, *CANVAS)
+        self.assertEqual(len(g.point_darkness), 0)
+        self.assertEqual(float(g.curvature_histogram.sum()), 0.0)
+
+    def test_identical_signature_has_full_pressure_and_curvature_agreement(self):
+        image = draw_signature(31)
+        s = signals(image, image)
+        self.assertGreater(s.pressure_pattern, 0.8)
+        self.assertAlmostEqual(s.curvature, 1.0, places=9)
+
+    def test_signals_stay_in_range(self):
+        s = signals(draw_signature(32), draw_signature(33))
+        self.assertTrue(-1.0 <= s.pressure_pattern <= 1.0)
+        self.assertTrue(0.0 <= s.curvature <= 1.0)
+
+    def test_pressure_pattern_ignores_a_global_tone_change(self):
+        """A monotone tone mapping of the questioned scan must not change the rank signal much."""
+        image = draw_signature(34, variation=0.0)
+        rng = np.random.default_rng(0)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float64)
+        ink = gray < 128
+        gray[ink] = np.clip(gray[ink] + rng.normal(0, 25, ink.sum()), 0, 120)   # pressure variation
+        varied = cv2.cvtColor(gray.astype(np.uint8), cv2.COLOR_GRAY2BGR)
+        lighter = np.clip(255.0 - (255.0 - varied.astype(np.float64)) * 0.6, 0, 255).astype(np.uint8)
+        base = signals(varied, varied).pressure_pattern
+        toned = signals(varied, lighter).pressure_pattern
+        self.assertGreater(toned, 0.7 * base)
+
+    def test_pressure_pattern_follows_where_the_ink_is_dark(self):
+        """Same stroke geometry, darkness pattern reversed along the strokes -> lower agreement."""
+        gray = np.full((300, 900), 255, np.uint8)
+        x = np.linspace(60, 840, 400)
+        y = 150 + 60 * np.sin(x / 70.0)
+        pts = np.stack([x, y], 1).astype(np.int32)
+        left_dark, right_dark = gray.copy(), gray.copy()
+        for k in range(len(pts) - 1):
+            t = k / (len(pts) - 1)
+            cv2.line(left_dark, tuple(pts[k]), tuple(pts[k + 1]), int(20 + 140 * t), 5, cv2.LINE_AA)
+            cv2.line(right_dark, tuple(pts[k]), tuple(pts[k + 1]), int(160 - 140 * t), 5, cv2.LINE_AA)
+        to_bgr = lambda g: cv2.cvtColor(g, cv2.COLOR_GRAY2BGR)  # noqa: E731
+        same = signals(to_bgr(left_dark), to_bgr(left_dark)).pressure_pattern
+        reversed_ = signals(to_bgr(left_dark), to_bgr(right_dark)).pressure_pattern
+        self.assertGreater(same, 0.5)
+        self.assertLess(reversed_, 0.0)
+
+    def test_angular_strokes_lower_curvature_agreement(self):
+        smooth = np.full((300, 900, 3), 255, np.uint8)
+        jagged = smooth.copy()
+        x = np.linspace(60, 840, 300)
+        wave = np.stack([x, 150 + 70 * np.sin(x / 60.0)], 1).astype(np.int32)
+        zigzag = np.stack([x, 150 + 70 * np.sign(np.sin(x / 15.0))], 1).astype(np.int32)
+        cv2.polylines(smooth, [wave.reshape(-1, 1, 2)], False, (20, 20, 20), 4, cv2.LINE_AA)
+        cv2.polylines(jagged, [zigzag.reshape(-1, 1, 2)], False, (20, 20, 20), 4, cv2.LINE_AA)
+        self.assertLess(signals(smooth, jagged).curvature, signals(smooth, smooth).curvature)
+
+    def test_curvature_histogram_is_resolution_invariant(self):
+        image = draw_signature(35)
+        big = cv2.resize(image, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        self.assertGreater(signals(image, big).curvature, 0.9)
+
+    def test_linear_emd_bounds(self):
+        p, q = np.zeros(CURVATURE_BINS), np.zeros(CURVATURE_BINS)
+        p[0], q[-1] = 1.0, 1.0
+        self.assertAlmostEqual(_linear_emd(p, q), CURVATURE_MAX_EMD)
+        self.assertEqual(_linear_emd(p, p), 0.0)
+
+    def test_rank_correlation_guards(self):
+        self.assertEqual(_rank_correlation(np.arange(5.0), np.arange(5.0)), 0.0)   # too few points
+        self.assertEqual(_rank_correlation(np.ones(50), np.arange(50.0)), 0.0)      # constant input
+        self.assertAlmostEqual(_rank_correlation(np.arange(50.0), np.arange(50.0) ** 3), 1.0)
+        self.assertAlmostEqual(_rank_correlation(np.arange(50.0), -np.arange(50.0)), -1.0)
+
+    def test_along_stroke_mean_averages_neighbours_only(self):
+        points = np.array([[0.0, 0.0], [1.0, 0.0], [10.0, 0.0]])
+        values = np.array([0.0, 1.0, 5.0])
+        np.testing.assert_allclose(_along_stroke_mean(points, values, 2.0), [0.5, 0.5, 5.0])
+
+    def test_quality_descriptors_are_bit_identical_across_calls(self):
+        image = draw_signature(36, variation=0.05, variation_seed=1)
+        a, b = geometry_of(image), geometry_of(image)
+        self.assertTrue(np.array_equal(a.point_darkness, b.point_darkness))
+        self.assertTrue(np.array_equal(a.curvature_histogram, b.curvature_histogram))
 
 
 class TestRobustness(unittest.TestCase):

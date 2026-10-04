@@ -133,6 +133,8 @@ EVIDENCE_SIGNAL_NAMES: Mapping[str, str] = MappingProxyType({
     "column_profile": "horizontal_profile_agreement",
     "row_profile": "vertical_profile_agreement",
     "stroke_width": "stroke_width_agreement",
+    "pressure_pattern": "pressure_pattern_agreement",
+    "curvature": "stroke_curvature_agreement",
 })
 
 
@@ -186,6 +188,8 @@ def compare(
         "column_profile": strokes.column_profile,
         "row_profile": strokes.row_profile,
         "stroke_width": strokes.stroke_width,
+        "pressure_pattern": strokes.pressure_pattern,
+        "curvature": strokes.curvature,
     }
     logit = fuse_signals(signals, f)
     prob = float(1.0 / (1.0 + np.exp(-logit)))

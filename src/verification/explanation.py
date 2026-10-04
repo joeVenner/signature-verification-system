@@ -34,6 +34,8 @@ LABELS = {
     "horizontal_profile_agreement": "Horizontal ink distribution (rhythm & spacing)",
     "vertical_profile_agreement": "Vertical ink distribution (letter & loop heights)",
     "stroke_width_agreement": "Pen stroke width",
+    "pressure_pattern_agreement": "Ink darkness pattern along matching strokes (pen pressure & speed)",
+    "stroke_curvature_agreement": "Stroke curvature distribution (fluency vs. drawn, angular strokes)",
 }
 
 

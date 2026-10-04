@@ -8,8 +8,10 @@ from pydantic import BaseModel, Field, field_validator
 # Signals fused into the match log-odds, in canonical order (see FusionModel).
 # "layout" is still computed and reported, but carries no weight: it is redundant
 # with slant + stroke direction and got a (meaningless) negative weight in EXP-015.
+# "pressure_pattern" and "curvature" (EXP-017) measure stroke quality, not shape.
 FUSION_SIGNALS = (
     "keypoint", "stroke_direction", "slant", "column_profile", "row_profile", "stroke_width",
+    "pressure_pattern", "curvature",
 )
 
 
@@ -49,14 +51,15 @@ class DecisionThresholds(BaseModel):
     """
     accept_margin_logit: float = Field(default=1.0)
     reject_genuine_quantile: float = Field(default=0.05)
-    single_accept_logit: float = Field(default=6.4721)
-    single_reject_logit: float = Field(default=-0.3264)
-    single_hard_reject_logit: float = Field(default=-6.5919)
-    multi_accept_logit: float = Field(default=7.2585)
-    multi_reject_logit: float = Field(default=2.5302)
-    multi_hard_reject_logit: float = Field(default=0.2738)
+    single_accept_logit: float = Field(default=6.3645)
+    single_reject_logit: float = Field(default=-0.0803)
+    single_hard_reject_logit: float = Field(default=-4.1280)
+    multi_accept_logit: float = Field(default=8.5690)
+    multi_reject_logit: float = Field(default=3.0381)
+    multi_hard_reject_logit: float = Field(default=0.5526)
     selected_on: str = Field(
-        default="benchmark/select_thresholds.py on CEDAR-55w dev split (single: 1:1 protocol; multi: 3-specimen protocol)"
+        default="benchmark/select_thresholds.py on CEDAR-55w dev split, harmonized images, --max-random 6000 "
+                "--max-random-per-query 40 (single: 1:1 protocol; multi: 3-specimen protocol; EXP-017)"
     )
 
 
@@ -100,6 +103,9 @@ class StrokeParams(BaseModel):
     column_dtw_length: int = Field(default=128, description="Resampled length of the horizontal profile for DTW")
     row_dtw_length: int = Field(default=64, description="Resampled length of the vertical profile for DTW")
     dtw_band_fraction: float = Field(default=0.1, description="Sakoe-Chiba band as a fraction of profile length")
+    pressure_blur_sigma: float = Field(default=1.0, description="Blur of the ink map before sampling darkness on the skeleton (EXP-017)")
+    pressure_radius: float = Field(default=4.0, description="Along-stroke averaging radius (canvas px) of the skeleton darkness")
+    curvature_min_contour_points: int = Field(default=15, description="Contours shorter than this (specks) carry no curvature")
 
 
 class RepresentationParams(BaseModel):
@@ -128,22 +134,25 @@ class FusionModel(BaseModel):
     Fitted writer-independently by benchmark/fit_fusion.py; never hand-tuned.
     `signal_weights` is keyed by `FUSION_SIGNALS`.
 
-    Slant note: the fit (1.877) used the raw circular EMD distance (range 0..9); the
-    shipped signal is normalised to [0, 1] by dividing by 9, which is the exact affine
-    map slant_new = (8 + slant_fit) / 9. Weight 16.893 = 9 x 1.877 and bias
-    -39.985 = -24.969 - 8 x 1.877 therefore reproduce the fitted log-odds exactly.
+    EXP-017 refit all weights on harmonized images (the EXP-015 fit read raw scans) with
+    the two stroke-quality signals added; the slant signal is fitted directly in its
+    normalised [0, 1] form. Curvature has the largest weight because its values sit in
+    a narrow band (~0.9-1.0): the weight is per unit of signal, not an importance.
     """
     signal_weights: Dict[str, float] = Field(default_factory=lambda: {
-        "keypoint": 14.417,
-        "stroke_direction": 9.706,
-        "slant": 16.893,
-        "column_profile": 8.606,
-        "row_profile": 9.023,
-        "stroke_width": 7.173,
+        "keypoint": 22.869,
+        "stroke_direction": 6.303,
+        "slant": 14.799,
+        "column_profile": 5.591,
+        "row_profile": 5.863,
+        "stroke_width": 4.903,
+        "pressure_pattern": 7.208,
+        "curvature": 31.200,
     })
-    bias: float = Field(default=-39.985)
+    bias: float = Field(default=-61.160)
     fitted_on: str = Field(
-        default="CEDAR-55w dev split (writers 1-55, genuine 1-6, forgeries 1-6), 1:1 protocol, balanced L2-LR C=0.1",
+        default="CEDAR-55w dev split (writers 1-55, genuine 1-6, forgeries 1-6), harmonized images, "
+                "1:1 protocol, --max-random 6000, balanced L2-LR C=0.1 (EXP-017)",
         description="Provenance of the coefficients",
     )
 
