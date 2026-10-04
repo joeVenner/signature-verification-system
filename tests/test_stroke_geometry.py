@@ -394,6 +394,8 @@ class TestSymmetricStrokeAlignment(unittest.TestCase):
             return stroke_signals(x.stroke, y.stroke, seed, p.stroke)
 
         ab, ba = one_way(self.a, self.b), one_way(self.b, self.a)
+        # The pair is chosen so the two directions disagree; otherwise the test would be vacuous.
+        self.assertNotEqual((ab.direction_agreement, ab.pressure_pattern), (ba.direction_agreement, ba.pressure_pattern))
         pair = compare(self.a, self.b)
         self.assertEqual(pair.signals["stroke_direction"], max(ab.direction_agreement, ba.direction_agreement))
         self.assertEqual(pair.signals["pressure_pattern"], max(ab.pressure_pattern, ba.pressure_pattern))
