@@ -6,6 +6,7 @@ All notable changes to this project are documented here, following
 ## [Unreleased]
 
 ### Added
+- Stroke-quality signals `pressure_pattern` (tone-invariant rank correlation of ink darkness along ICP-matched strokes) and `curvature` (contour-curvature distribution), fused and explained. Val skilled EER 15.4% -> 12.5%, clearance score 3.99 -> 4.98 (EXP-017).
 - Live verification console at `/` (plain HTML/CSS/JS, `src/api/static/`): drop / browse / paste inputs, sample-pair picker, verdict badge, decision-aligned score gauge, log-odds margin, 8-stage pipeline view and in-memory session history.
 - `POST /api/v1/signature/inspect`: the `/signature/compare` result plus PNG renderings of the real pipeline intermediates, per-signal fusion contributions, thresholds and timing (`src/api/inspection.py`, `src/api/visuals.py`).
 - `GET /api/v1/samples` and `GET /api/v1/samples/{id}`: labelled sample gallery served only from `SIGVERIFY_SAMPLES_DIR`, server-generated ids only (`src/api/samples.py`).
@@ -23,6 +24,7 @@ All notable changes to this project are documented here, following
 - `DETERMINISM.md` and `src/core/determinism.py` (single determinism control point).
 
 ### Changed
+- Fusion, thresholds and evidence reference refitted on harmonized dev images; the fitting scripts now harmonize by default (`--condition raw` reproduces older fits) (EXP-017).
 - `FusionModel` now holds one weight per signal (`signal_weights`, validated); fusion weights, ACCEPT / REVIEW / REJECT thresholds and the evidence reference were refitted on a 55-writer dev split. With three specimens genuine auto-accept falls (73% -> 29%) while skilled forgeries accepted fall 1.5% -> 0% on the untouched test slice.
 - Declared `scipy` (runtime), `scikit-learn` (dev, fitting scripts) and Python >= 3.12 in the requirements files.
 - `DecisionEngine` routes logit bands; legacy probability thresholds only apply to results without a logit.

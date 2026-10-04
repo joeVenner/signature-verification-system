@@ -853,3 +853,56 @@ differences below ~2 EER points are within noise.
 * **Cost:** ~175 ms mean per extract on dev (proxy, 6 workers), within the prior budget.
 * **Limits:** only perfectly horizontal rules; an ink-dark rule fused with the signature
   (signing across the line) is kept; vertical rules and stamps are not handled.
+
+## EXP-017 — Stroke-quality signals: ink pressure pattern and contour curvature
+
+* **Failure analysis (dev, harmonized, production fusion):** the hardest skilled forgeries
+  (highest logits) are not fooled by one signal; they sit at the 25-50th genuine
+  percentile on *every* shape signal (mean percentile over skilled pairs above the EER
+  threshold: keypoint 0.28, direction 0.25, slant 0.33, column 0.23, row 0.32, width 0.48).
+  Writers 23, 21, 24, 46, 01 hold most of them. Side-by-sides show the forger copied the
+  outline well; what differs is stroke quality: the genuine strokes taper, thin and darken
+  in writer-specific places, forgeries have uniform, blunt, rounder strokes. The hardest
+  genuine pairs (writers 08, 45, 41, 14) are real intra-writer variation (an extra
+  flourish, a shortened name); no signal fixes those.
+* **Also found:** `fit_fusion.py`, `select_thresholds.py` and `fit_evidence_reference.py`
+  read raw scans while the clearance score harmonizes. They now take `--condition`
+  (default `harmonized`). Harmonized refit of the 6 old signals alone: CV skilled EER 12.37%.
+* **Candidates** (dev single-signal AUC genuine-vs-skilled; fused = writer-disjoint 2-fold
+  CV skilled EER when added to the 6 signals, base 12.37%, 3000 random pairs):
+
+  | signal | AUC | fused EER | note |
+  |---|---|---|---|
+  | width-histogram EMD / width CV / thin fraction | 0.73 / 0.65 / 0.65 | 12.37 / 12.23 / 12.59 | no gain |
+  | darkness-histogram EMD | 0.81 | 10.91 | **rejected: session shortcut** (same- vs cross-session AUC 0.609) |
+  | darkness std ratio | 0.73 | 11.63 | session AUC 0.545, superseded |
+  | contour curvature histogram EMD | 0.75 | 12.01 | session AUC 0.476; kept (joint gain) |
+  | contour roughness / mean curvature | 0.67 / 0.61 | 12.23 / 12.34 | no gain |
+  | aligned HOG 4x8 / aligned blurred-ink correlation | 0.87 / 0.88 | 12.97 / 12.62 | redundant with direction (negative weight) |
+  | worst-2-cell direction / tight direction / ICP residual | 0.81 / 0.91 / 0.85 | 12.62 / 12.48 / 12.23 | redundant |
+  | **pressure pattern** (rank corr. of darkness at ICP-matched points x coverage) | **0.907** | **11.40** | session AUC 0.508 |
+  | width rank pattern | 0.885 | 11.98 | weaker twin of pressure |
+  | **pressure + curvature** | | **10.55** | both folds improve (11.20/10.88 -> 9.74/9.37) |
+
+  Session test: different-writer pairs only, genuine(w1)-genuine(w2) vs genuine(w1)-forgery(w2);
+  the existing stroke_width and slant score 0.456 / 0.463 on it.
+* **Shipped:** `pressure_pattern` and `curvature` in `stroke_geometry.py` (one shared ICP
+  alignment and correspondence for direction and pressure). Refit on harmonized dev
+  (`--max-random 6000`): CV skilled AUC 0.958, EER **10.58%**, random EER 2.18%; all weights
+  positive. Thresholds (`--max-random-per-query 40`): single accept 6.3645 / reject -0.0803;
+  CV single-specimen genuine auto-accept 39.3% at 0 skilled accepted.
+* **Dev clearance** (in-sample for weights/thresholds): 5.18 -> **5.94** (D 0.681, R 0.533,
+  O 0.539); clean skilled EER 11.76% -> 10.08%, random 1.70%.
+* **Val clearance (reported once):** 3.99 -> **4.98** (D 0.599, R 0.409, O 0.454, gate off).
+  Clean skilled EER 15.42% -> **12.48%** (AUC 0.940), random 2.67%. Operating point:
+  genuine MATCH 28.2 / REVIEW 63.8 / NOMATCH 8.0%; skilled MATCH 0.1 / NOMATCH 78.5%; random
+  NOMATCH 99.9%. Condition EERs: tinted 12.7, shadow 13.7, ruled 12.6, large canvas 12.4,
+  distractor 13.0, faint 13.6, scale 0.5 20.0, scale 2.0 17.7, rotate +20 15.4,
+  rotate -15 17.8, phone 13.8.
+* **Limits:** curvature is resolution-fragile: on dev, scale 0.5 / 2.0 EERs got worse with
+  it (14.9 -> 15.7, 13.4 -> 14.2 vs the harmonized 6-signal refit) while all other
+  conditions improved; pressure alone improved all 11. Val genuine NOMATCH is 8.0% (> the
+  5% design target), and 20-27% under scale / rotation. Scale-robust curvature is the
+  next step.
+* **Cost:** serial, same 24 images: extraction 181 -> 179 ms, compare 7.7 -> 7.7 ms per pair
+  (no measurable change; the extra work is ~1 ms each).
