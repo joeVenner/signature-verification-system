@@ -5,6 +5,7 @@ and no network. They check behaviour (alignment, ordering, guards, determinism),
 not tuned accuracy numbers: accuracy is measured by benchmark/run_benchmark.py.
 """
 
+import dataclasses
 import subprocess
 import sys
 import tempfile
@@ -368,6 +369,41 @@ class TestFusion(unittest.TestCase):
     def test_empty_reference_list_rejected(self):
         with self.assertRaises(ValueError):
             compare_multi([], extract_features(draw_signature(19)))
+
+
+class TestSymmetricStrokeAlignment(unittest.TestCase):
+    """EXP-019: alignment-based signals take the better of both alignment directions."""
+
+    ALIGNED = ("stroke_direction", "pressure_pattern")
+
+    def setUp(self):
+        self.a = extract_features(draw_signature(21))
+        self.b = extract_features(draw_signature(21, 0.08, 3, angle=6.0))
+
+    def test_alignment_signals_do_not_depend_on_argument_order(self):
+        forward, backward = compare(self.a, self.b), compare(self.b, self.a)
+        for name in self.ALIGNED:
+            self.assertEqual(forward.signals[name], backward.signals[name], name)
+
+    def test_alignment_signals_are_the_max_of_both_directions(self):
+        p = DEFAULT_CONFIG.representation
+
+        def one_way(x, y):
+            k = compare(x, y).keypoint
+            seed = k.transform if k.inliers >= p.align_min_inliers else None
+            return stroke_signals(x.stroke, y.stroke, seed, p.stroke)
+
+        ab, ba = one_way(self.a, self.b), one_way(self.b, self.a)
+        pair = compare(self.a, self.b)
+        self.assertEqual(pair.signals["stroke_direction"], max(ab.direction_agreement, ba.direction_agreement))
+        self.assertEqual(pair.signals["pressure_pattern"], max(ab.pressure_pattern, ba.pressure_pattern))
+        self.assertEqual(pair.signals["slant"], ab.slant)   # non-alignment signals keep the forward value
+
+    def test_degenerate_questioned_geometry_scores_zero_in_both_directions(self):
+        empty = dataclasses.replace(self.b, stroke=extract_stroke_geometry(np.zeros((40, 80)), PARAMS, *CANVAS))
+        for pair in (compare(self.a, empty), compare(empty, self.a)):
+            for name in self.ALIGNED:
+                self.assertEqual(pair.signals[name], 0.0, name)
 
 
 class TestCrossProcessDeterminism(unittest.TestCase):

@@ -57,16 +57,16 @@ class DecisionThresholds(BaseModel):
     reject_genuine_quantile: float = Field(default=0.05)
     max_skilled_match_rate: float = Field(default=0.0025)
     max_random_match_rate: float = Field(default=0.001)
-    single_accept_logit: float = Field(default=5.5123)
-    single_reject_logit: float = Field(default=-0.6729)
-    single_hard_reject_logit: float = Field(default=-5.5863)
-    multi_accept_logit: float = Field(default=8.3837)
-    multi_reject_logit: float = Field(default=2.2261)
-    multi_hard_reject_logit: float = Field(default=0.0533)
+    single_accept_logit: float = Field(default=6.3685)
+    single_reject_logit: float = Field(default=-0.6514)
+    single_hard_reject_logit: float = Field(default=-5.5909)
+    multi_accept_logit: float = Field(default=8.7599)
+    multi_reject_logit: float = Field(default=2.5911)
+    multi_hard_reject_logit: float = Field(default=-1.0847)
     selected_on: str = Field(
         default="benchmark/select_thresholds.py on CEDAR-55w dev split, harmonized images, --max-random 6000 "
                 "--max-random-per-query 40, out-of-fold logits (single: 1:1 protocol; multi: 3-specimen "
-                "protocol; EXP-018)"
+                "protocol; rule EXP-018, reselected for the EXP-019 fusion)"
     )
 
 
@@ -145,21 +145,23 @@ class FusionModel(BaseModel):
     the two stroke-quality signals added; the slant signal is fitted directly in its
     normalised [0, 1] form. Curvature has the largest weight because its values sit in
     a narrow band (~0.9-1.0): the weight is per unit of signal, not an importance.
+    EXP-019 refit after stroke direction and pressure pattern became symmetric (best of
+    the two alignment directions); CV skilled EER 10.58% -> 9.59%.
     """
     signal_weights: Dict[str, float] = Field(default_factory=lambda: {
-        "keypoint": 22.869,
-        "stroke_direction": 6.303,
-        "slant": 14.799,
-        "column_profile": 5.591,
-        "row_profile": 5.863,
-        "stroke_width": 4.903,
-        "pressure_pattern": 7.208,
-        "curvature": 31.200,
+        "keypoint": 15.751,
+        "stroke_direction": 9.070,
+        "slant": 13.343,
+        "column_profile": 3.975,
+        "row_profile": 4.949,
+        "stroke_width": 5.043,
+        "pressure_pattern": 8.809,
+        "curvature": 29.641,
     })
-    bias: float = Field(default=-61.160)
+    bias: float = Field(default=-57.084)
     fitted_on: str = Field(
         default="CEDAR-55w dev split (writers 1-55, genuine 1-6, forgeries 1-6), harmonized images, "
-                "1:1 protocol, --max-random 6000, balanced L2-LR C=0.1 (EXP-017)",
+                "1:1 protocol, --max-random 6000, balanced L2-LR C=0.1, symmetric stroke alignment (EXP-019)",
         description="Provenance of the coefficients",
     )
 

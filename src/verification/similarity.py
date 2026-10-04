@@ -17,7 +17,7 @@ from signature_verification_system.src.core.config import (
 )
 from signature_verification_system.src.preprocessing.normalization import canonicalize
 from signature_verification_system.src.verification.features import SignatureFeatures, gradient_grid_descriptor
-from signature_verification_system.src.verification.stroke_geometry import stroke_signals
+from signature_verification_system.src.verification.stroke_geometry import StrokeSignals, stroke_signals
 
 
 @dataclass(frozen=True)
@@ -97,7 +97,7 @@ def aligned_shape(
     plausible transform (enough inliers, bounded rotation and scale), the
     specimen's letter-boxed ink map is warped onto the query's before the
     descriptor is computed. Returns None when no trustworthy alignment exists.
-    compare() is asymmetric by design (specimen `a` → query `b`). Rotation is in
+    The layout score is asymmetric by design (specimen `a` → query `b`). Rotation is in
     image coordinates (y down): a positive angle turns the specimen clockwise.
     """
     p = params or DEFAULT_CONFIG.representation
@@ -163,13 +163,35 @@ def fuse_signals(signals: Dict[str, float], fusion: FusionModel) -> float:
     return float(fusion.bias + sum(fusion.signal_weights[name] * signals[name] for name in FUSION_SIGNALS))
 
 
+def _trusted_seed(k: KeypointMatch, p: RepresentationParams) -> Optional[np.ndarray]:
+    """The keypoint transform seeds the stroke alignment only when it is trustworthy."""
+    return k.transform if k.inliers >= p.align_min_inliers else None
+
+
+def _reverse_aligned_signals(a: SignatureFeatures, b: SignatureFeatures, p: RepresentationParams) -> StrokeSignals:
+    """Stroke signals with the roles swapped: questioned `b` aligned onto specimen `a` (EXP-019).
+
+    The keypoint match is recomputed in the b -> a direction (the Lowe ratio test is not
+    symmetric), exactly as compare(b, a) would do, so the reverse alignment gets its own seed.
+    """
+    return stroke_signals(b.stroke, a.stroke, _trusted_seed(keypoint_similarity(b, a, p), p), p.stroke)
+
+
 def compare(
     a: SignatureFeatures,
     b: SignatureFeatures,
     fusion: Optional[FusionModel] = None,
     params: Optional[RepresentationParams] = None,
 ) -> PairSimilarity:
-    """Fuse all similarity signals of specimen `a` vs questioned `b` with the fixed logistic model."""
+    """Fuse all similarity signals of specimen `a` vs questioned `b` with the fixed logistic model.
+
+    The two signals read through the ICP stroke alignment (stroke direction, pressure
+    pattern) take the better of the a -> b and b -> a alignments, which makes them
+    symmetric in `a` and `b` (EXP-019). Every other fused signal is symmetric or nearly
+    so already; layout and keypoint keep the specimen -> query direction. Measured on dev:
+    CV skilled EER 10.58% -> 9.59% for ~5 ms more per pair (5.4 -> 10.2 ms; one feature
+    extraction is ~180 ms).
+    """
     f = fusion or DEFAULT_CONFIG.fusion
     p = params or DEFAULT_CONFIG.representation
     k = keypoint_similarity(a, b, p)
@@ -177,18 +199,17 @@ def compare(
     unaligned = shape_similarity(a, b)
     used = alignment is not None and alignment.shape_similarity > unaligned
     layout = alignment.shape_similarity if used else unaligned
-    # The keypoint transform seeds the stroke alignment only when it is trustworthy.
-    seed = k.transform if k.inliers >= p.align_min_inliers else None
-    strokes = stroke_signals(a.stroke, b.stroke, seed, p.stroke)
+    strokes = stroke_signals(a.stroke, b.stroke, _trusted_seed(k, p), p.stroke)
+    reverse = _reverse_aligned_signals(a, b, p)
     signals = {
         "layout": layout,
         "keypoint": k.similarity,
-        "stroke_direction": strokes.direction_agreement,
+        "stroke_direction": max(strokes.direction_agreement, reverse.direction_agreement),
         "slant": strokes.slant,
         "column_profile": strokes.column_profile,
         "row_profile": strokes.row_profile,
         "stroke_width": strokes.stroke_width,
-        "pressure_pattern": strokes.pressure_pattern,
+        "pressure_pattern": max(strokes.pressure_pattern, reverse.pressure_pattern),
         "curvature": strokes.curvature,
     }
     logit = fuse_signals(signals, f)
