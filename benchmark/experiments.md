@@ -999,18 +999,23 @@ differences below ~2 EER points are within noise.
   | forward, minus query cohort mean | 9.56 | 9.59 | 9.59 |
   | max-all, minus query cohort mean | 8.98 | 9.12 | 9.34 |
   | max-all, minus both means | 9.20 | 9.31 | 9.34 |
-  | **shipped**, minus query cohort mean | 8.84 | 9.20 | not run |
+  | **shipped**, minus query cohort mean | 8.84 | 9.20 | 8.98 |
 
-  Dividing by the cohort sigma always hurts (+1.4 to +2.8 pt). Mean offsets help the
-  forward score but add only 0.4-0.75 pt on top of the symmetric signals, not monotone in
-  K. Caveat variants (forward / max-all, minus both means): cohort from *all* other
-  dev writers (including test-fold ones) 10.80 / 10.17 at K=20, 10.17 / 9.70 at K=50;
-  "val-like" (same writers allowed, only the pair's images excluded; with K <= 55 only
-  the first K sorted writers can contribute) 10.69 / 9.81 at K=20, 10.08 / 9.34 at K=50,
-  i.e. no gain over the symmetric signals. Cost: K compares per side per request (K=20,
-  query side: ~200 ms, +55% of a request), a shipped cohort, and a logit that is no
-  longer the fused log-odds the thresholds and inspect breakdown assume. **Rejected:**
-  not robust above the 0.5 pt bar.
+  Dividing by the cohort sigma always hurts: +1.4 to +2.4 pt vs the forward baseline
+  (10.58), up to +3.4 pt on the symmetric-mean base. Mean offsets help the forward score
+  but add only 0.4-0.75 pt on top of the symmetric signals, not monotone in K.
+  Caveat variants, shipped minus query cohort mean (base 9.59): cohort from *all* other
+  dev writers incl. test-fold ones 10.28 (K=20) / 8.95 (K=50); "val-like" (same writers
+  allowed, only the pair's own images excluded; with K <= 55 only the first K sorted
+  writers contribute) 10.06 / 8.84. Forward / max-all minus both means: all-other-writers
+  10.80 / 10.17 (K=20), 10.17 / 9.70 (K=50); val-like 10.69 / 9.81, 10.08 / 9.34.
+  K=20 query-mean nominally clears the bar honestly (-0.75 pt) but turns into a loss
+  (+0.5-0.7 pt) when only the cohort composition changes; K=50-100 give -0.4 to -0.75 pt.
+  Cost (derived, not timed end to end): K extra compares per request at ~10 ms each
+  (K=50: ~500 ms, more than doubling a ~375 ms request), a shipped cohort, and a
+  normalised score that is no longer the fused log-odds the thresholds, multi-specimen
+  max and inspect breakdown assume. **Rejected for now:** gain is cohort-dependent and
+  borderline against the 0.5 pt bar; K >= 50 query-mean is the candidate if latency allows.
 * **Shipped:** `similarity.compare` computes stroke signals a second time with the roles
   swapped (own b -> a keypoint seed) and keeps max(forward, reverse) for stroke_direction
   and pressure_pattern. All consumers (1:1, multi-specimen max, fitting scripts,
@@ -1030,8 +1035,8 @@ differences below ~2 EER points are within noise.
   scale 2.0 17.2, rotate +20 14.3, rotate -15 16.3, phone 12.6. Max skilled MATCH over
   conditions 0.2%.
 * **Cost:** compare 5.4 -> 10.2 ms per pair (serial, 200 dev pairs); `compare_signatures`
-  339 -> 375 ms per request (12 dev pairs, serial; the 1:1 path calls compare() more than
-  once).
+  mean 372 -> 375 ms, median 372 -> 382 ms per request (40 dev pairs, serial, interleaved;
+  extraction dominates).
 * **Limits:** the higher accept threshold (larger weight norm) lowered val genuine MATCH
   36.8% -> 28.8%, so O fell slightly; multi-specimen nested skilled accept rose 0.35% ->
   0.56% (rule unchanged, not re-tuned). Genuine NOMATCH under scale / rotation is still
