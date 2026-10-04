@@ -26,6 +26,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 
 from signature_verification_system.benchmark import metrics as M
+from signature_verification_system.benchmark.conditions import CONDITIONS
 from signature_verification_system.benchmark.protocol import (
     cap_random_pairs, load_images, one_to_one_pairs, writer_folds,
 )
@@ -54,11 +55,15 @@ def main() -> int:
     ap.add_argument("--data-dir", default=str(PKG / "data" / "samples"))
     ap.add_argument("--max-random", type=int, default=0, help="cap on random-forgery pairs (0 = all)")
     ap.add_argument("--out", default=str(PKG / "benchmark" / "results" / "fusion_fit.json"))
+    ap.add_argument("--condition", choices=sorted(CONDITIONS), default="harmonized",
+                    help="input condition; harmonized (default since EXP-017) matches the clearance score and "
+                         "keeps the CEDAR scan-session shortcut out of the weights")
     args = ap.parse_args()
     images = load_images(Path(args.data_dir))
     by_id = {s.image_id: s for s in images}
     folds = writer_folds(images)
-    feats = {s.image_id: extract_features(cv2.imread(s.path)) for s in images}
+    prepare = CONDITIONS[args.condition]
+    feats = {s.image_id: extract_features(prepare(cv2.imread(s.path))) for s in images}
     pairs = cap_random_pairs(one_to_one_pairs(images), args.max_random)
 
     sims = [compare(feats[p.ref_id], feats[p.query_id]) for p in pairs]  # same signals as production

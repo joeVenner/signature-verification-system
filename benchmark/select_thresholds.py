@@ -22,6 +22,7 @@ import cv2
 import numpy as np
 
 from signature_verification_system.benchmark import metrics as M
+from signature_verification_system.benchmark.conditions import CONDITIONS
 from signature_verification_system.benchmark.protocol import (
     cap_random_pairs, load_images, one_to_one_pairs, writer_dependent_trials, writer_folds,
 )
@@ -59,11 +60,14 @@ def main() -> int:
     ap.add_argument("--max-random", type=int, default=0, help="cap on random 1:1 pairs (0 = all)")
     ap.add_argument("--max-random-per-query", type=int, default=0, help="cap on other-writer queries per held-out genuine")
     ap.add_argument("--out", default=str(PKG / "benchmark" / "results" / "thresholds.json"))
+    ap.add_argument("--condition", choices=sorted(CONDITIONS), default="harmonized",
+                    help="input condition; harmonized (default since EXP-017) matches the clearance score")
     args = ap.parse_args()
     images = load_images(Path(args.data_dir))
     by_id = {s.image_id: s for s in images}
     folds = writer_folds(images)
-    feats = {s.image_id: extract_features(cv2.imread(s.path)) for s in images}
+    prepare = CONDITIONS[args.condition]
+    feats = {s.image_id: extract_features(prepare(cv2.imread(s.path))) for s in images}
 
     def fold(a: str, b: str) -> int:
         x, y = folds[by_id[a].writer], folds[by_id[b].writer]

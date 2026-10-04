@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 
 from signature_verification_system.benchmark import metrics as M
+from signature_verification_system.benchmark.conditions import CONDITIONS
 from signature_verification_system.benchmark.protocol import load_images, one_to_one_pairs
 from signature_verification_system.src.verification.features import extract_features
 from signature_verification_system.src.verification.similarity import (
@@ -56,9 +57,12 @@ def main() -> int:
     ap.add_argument("--data-dir", default=str(PKG / "data" / "samples"))
     ap.add_argument("--thresholds", default=str(PKG / "benchmark" / "results" / "thresholds.json"))
     ap.add_argument("--out", default=str(OUT))
+    ap.add_argument("--condition", choices=sorted(CONDITIONS), default="harmonized",
+                    help="input condition; harmonized (default since EXP-017) matches the clearance score")
     args = ap.parse_args()
     images = [s for s in load_images(Path(args.data_dir)) if s.domain == "cedar"]
-    feats = {s.image_id: extract_features(cv2.imread(s.path)) for s in images}
+    prepare = CONDITIONS[args.condition]
+    feats = {s.image_id: extract_features(prepare(cv2.imread(s.path))) for s in images}
     pairs = [p for p in one_to_one_pairs(images) if p.label in ("genuine", "skilled")]
 
     measured: Dict[str, Dict[str, list]] = {}
