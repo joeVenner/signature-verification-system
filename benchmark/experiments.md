@@ -1195,3 +1195,58 @@ differences below ~2 EER points are within noise.
   is the only lead: test it with more dev data or fixed in advance, not chosen from this grid.
 * **Cost:** extraction of 660 dev images with 6 workers ~25 s per setting (10 s with NLM
   off); compare of 8805 pairs ~24 s (35 s on the 768x384 canvas).
+
+## EXP-023 — Frozen pretrained SigNet embedding as a 9th signal (rejected; production unchanged)
+
+* **Question (decision D-007):** does a published, frozen offline-signature CNN, used as-is
+  (no training or fine-tuning), add evidence beyond the 8 hand-crafted signals? Signal =
+  cosine of the two L2-normalised 2048-d embeddings (symmetric by construction).
+* **Model:** SigNet and SigNet-F (lambda 0.95), Hafemann, Sabourin & Oliveira, Pattern
+  Recognition 2017 (arXiv 1705.05787); PyTorch weights from `luizgh/sigver` (README Google
+  Drive links; `signet.pth` sha256 `9f23129c...4fb931`, `signet_f.pth` `6605cb2d...7929fc`,
+  63.2 MB each). Trained on **GPDS** users 300-881 only (not CEDAR). Licences: code BSD-3-Clause
+  (`sigver`; `sigver_wiwd` BSD-2-Clause); the weights carry no licence of their own and the
+  author states GPDS is **restricted to non-commercial use**. Loaded with
+  `torch.load(weights_only=True)` in a throwaway `.lab/` venv only, exported to ONNX (opset
+  17); ONNX vs PyTorch max abs diff 1.4e-5. Against the author's reference features the
+  re-run gives cosine 0.9995 (max abs diff 0.11), attributed to scikit-image preprocessing
+  drift (0.26 vs the original), not to the weights.
+* **Runtime (onnxruntime 1.30 CPU, 1 intra/inter-op thread):** ~2.2 ms per image (150x220);
+  100 runs on one input bit-identical.
+* **Method (dev only):** harmonized dev, `fit_fusion` pair set (`--max-random 6000`; 825
+  genuine / 1980 skilled / 6000 random); base reproduces CV skilled EER **9.59%**, AUC
+  0.9618, random 1.70%, folds 8.38 / 9.15. Grid declared before any run (10 configs):
+  model {SigNet, SigNet-F} x input {isolated ink crop (`NormalizedSignature.ink`, bg 0)
+  letter-boxed to 50 / 65 / 80 / 95% of the 170x242 canvas then centre-cropped 150x220;
+  the author's own `preprocess_signature` on the harmonised gray with the GPDS canvas
+  952x1360}. Selection rule (fixed beforehand): highest single-signal skilled AUC.
+  Fused = cosine added to the 8, `fit_fusion._fit`, writer-disjoint 2-fold CV. Session
+  test: different-writer genuine-genuine vs genuine-forgery pairs, all of them.
+
+  | model | input | AUC skl | EER skl | AUC rnd | EER rnd | session | fused skl EER | folds | fold weights |
+  |---|---|---|---|---|---|---|---|---|---|
+  | SigNet | ink 50% | 0.890 | 18.3 | 0.991 | 3.5 | 0.475 | 9.36 | 8.60/9.60 | 1.31/3.09 |
+  | SigNet | ink 65% | 0.899 | 17.1 | 0.993 | 2.8 | 0.464 | 9.45 | 8.77/9.20 | 1.07/3.42 |
+  | **SigNet** | **ink 80%** (rule pick) | **0.900** | 16.7 | 0.992 | 2.9 | 0.466 | **9.56** | 8.38/9.37 | 0.11/2.92 |
+  | SigNet | ink 95% | 0.897 | 18.2 | 0.991 | 3.2 | 0.472 | 9.59 | 8.55/9.65 | 0.57/4.04 |
+  | SigNet | official GPDS | 0.867 | 20.6 | 0.984 | 6.3 | 0.494 | 9.47 | 8.55/9.37 | 0.42/1.11 |
+  | SigNet-F | ink 50% | 0.829 | 23.9 | 0.965 | 9.5 | 0.499 | 9.81 | 9.52/8.64 | 3.66/2.77 |
+  | SigNet-F | ink 65% | 0.805 | 27.3 | 0.964 | 9.1 | 0.490 | 9.59 | 9.26/9.60 | -1.55/1.38 |
+  | SigNet-F | ink 80% | 0.801 | 27.6 | 0.957 | 10.8 | 0.472 | 9.81 | 8.55/9.37 | -0.94/-1.75 |
+  | SigNet-F | ink 95% | 0.818 | 25.5 | 0.958 | 10.3 | 0.457 | 9.36 | 8.77/9.37 | -0.85/-1.60 |
+  | SigNet-F | official GPDS | 0.874 | 19.9 | 0.985 | 5.1 | 0.511 | 9.34 | 8.33/9.37 | 2.94/2.83 |
+
+  (EER in %.) Shipped single signals for reference: direction 0.937, pressure 0.921.
+* **Bootstrap** (200 paired writer resamples of OOF logits): rule pick (SigNet ink 80%)
+  gain 0.03 pt, mean -0.05, 90% **-0.41..0.27**, P(gain > 0) 0.34; best fused (SigNet-F
+  official) gain 0.25 pt, mean 0.11, 90% -0.41..0.61, P 0.61; SigNet ink 50% 0.22 pt,
+  -0.49..0.33.
+* **Finding:** no session shortcut (0.46-0.51), strong against random forgeries (AUC up to
+  0.993) but weaker than every shipped stroke signal on skilled forgeries, and redundant in
+  fusion (best gain 0.25 pt, SigNet-F gets negative weights). GPDS-trained global features
+  separate writers, not careful copies of the same name.
+* **Decision: rejected; nothing changed.** No candidate reaches the 0.5 pt bar, so no
+  integration, refit, dev clearance or val scoring was run (val 5.24 stands). Independently
+  of accuracy, the GPDS non-commercial restriction would block banking use of these weights.
+  Other released GPDS-family extractors (`sigver_wiwd`: SigNet-SPP 300/600 dpi) exist only
+  as Lasagne pickles and were not loaded (no execution of downloaded pickles).
