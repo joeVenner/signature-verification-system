@@ -1,0 +1,137 @@
+{
+ "capture_conditions": {
+  "distractor_print": {
+   "auc_skilled": 0.956791,
+   "eer_skilled": 0.098081,
+   "extraction_failures": 1,
+   "genuine_NOMATCH": 0.064242,
+   "r": 0.607677,
+   "skilled_MATCH": 0.0
+  },
+  "faint_ink": {
+   "auc_skilled": 0.961388,
+   "eer_skilled": 0.099444,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.058182,
+   "r": 0.602222,
+   "skilled_MATCH": 0.0
+  },
+  "large_canvas_offcentre": {
+   "auc_skilled": 0.962988,
+   "eer_skilled": 0.095606,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.055758,
+   "r": 0.617576,
+   "skilled_MATCH": 0.0
+  },
+  "phone_photo": {
+   "auc_skilled": 0.955612,
+   "eer_skilled": 0.104141,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.064242,
+   "r": 0.583434,
+   "skilled_MATCH": 0.0
+  },
+  "rotate_+20": {
+   "auc_skilled": 0.945185,
+   "eer_skilled": 0.133586,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.207273,
+   "r": 0.465657,
+   "skilled_MATCH": 0.0
+  },
+  "rotate_-15": {
+   "auc_skilled": 0.937879,
+   "eer_skilled": 0.139394,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.127273,
+   "r": 0.442424,
+   "skilled_MATCH": 0.0
+  },
+  "ruled_lines": {
+   "auc_skilled": 0.952784,
+   "eer_skilled": 0.104141,
+   "extraction_failures": 1,
+   "genuine_NOMATCH": 0.072727,
+   "r": 0.583434,
+   "skilled_MATCH": 0.0
+  },
+  "scale_0.5": {
+   "auc_skilled": 0.898369,
+   "eer_skilled": 0.172172,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.193939,
+   "r": 0.311313,
+   "skilled_MATCH": 0.0
+  },
+  "scale_2.0": {
+   "auc_skilled": 0.94146,
+   "eer_skilled": 0.127525,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.149091,
+   "r": 0.489899,
+   "skilled_MATCH": 0.0
+  },
+  "shadow_gradient": {
+   "auc_skilled": 0.953818,
+   "eer_skilled": 0.098081,
+   "extraction_failures": 1,
+   "genuine_NOMATCH": 0.066667,
+   "r": 0.607677,
+   "skilled_MATCH": 0.0
+  },
+  "tinted_paper": {
+   "auc_skilled": 0.956302,
+   "eer_skilled": 0.100556,
+   "extraction_failures": 1,
+   "genuine_NOMATCH": 0.060606,
+   "r": 0.597778,
+   "skilled_MATCH": 0.0
+  }
+ },
+ "clean": {
+  "auc_random": 0.990706,
+  "auc_skilled": 0.956075,
+  "eer_random": 0.029045,
+  "eer_skilled": 0.09697,
+  "extraction_failures": 1,
+  "operating_point": {
+   "genuine": {
+    "MATCH": 0.28484848484848485,
+    "NOMATCH": 0.06545454545454546,
+    "REVIEW": 0.6496969696969697,
+    "n": 825
+   },
+   "random": {
+    "MATCH": 0.0,
+    "NOMATCH": 0.9963333333333333,
+    "REVIEW": 0.0036666666666666666,
+    "n": 3000
+   },
+   "skilled": {
+    "MATCH": 0.0,
+    "NOMATCH": 0.8106060606060606,
+    "REVIEW": 0.1893939393939394,
+    "n": 1980
+   }
+  },
+  "thresholds": {
+   "accept": 6.3685,
+   "reject": -0.6514
+  }
+ },
+ "clean_score_sha256": "d69bb7dd3ebd54c9691cd2162c7ff6b991573296a53ed2e51f8e649a8b9d75cb",
+ "components": {
+  "D": 0.68,
+  "O": 0.4823,
+  "R": 0.5372
+ },
+ "n_pairs": {
+  "genuine": 825,
+  "random": 3000,
+  "skilled": 1980
+ },
+ "safety_gate_triggered": false,
+ "score": 5.779,
+ "seconds": 1046.3
+}

@@ -6,6 +6,11 @@ All notable changes to this project are documented here, following
 ## [Unreleased]
 
 ### Added
+- Frozen 0-10 clearance score for the 1:1 problem (`benchmark/clearance_score.py`): clean discrimination, 11 deterministic capture conditions and the production operating point, with a forgery-accept safety gate. Final: holdout 4.93 -> 5.78, test 5.26 -> 6.00, validation 3.88 -> 5.24 (see `benchmark/REPORT.md`).
+- 100-run determinism suite (`tests/test_determinism_100.py`): byte-identical JSON over 100 runs on three synthetic pairs and across three fresh interpreters.
+- `.env` runtime configuration (`envfile.py`, `.env.example`) and a `serve.py` launcher that applies it before numpy / OpenCV load; configurable audit ledger paths. Shell variables override the file.
+- Presentation deck `slides/signature-verification/` (open-slide) summarising the system and its benchmarks.
+- Signature-ink isolation before cropping (`src/preprocessing/isolation.py`): long ruled / form lines and printed text rows are removed. Printed-text condition EER 31.4% -> 15.6% on validation with clean results unchanged (EXP-016).
 - Stroke-quality signals `pressure_pattern` (tone-invariant rank correlation of ink darkness along ICP-matched strokes) and `curvature` (contour-curvature distribution), fused and explained. Val skilled EER 15.4% -> 12.5%, clearance score 3.99 -> 4.98 (EXP-017).
 - Live verification console at `/` (plain HTML/CSS/JS, `src/api/static/`): drop / browse / paste inputs, sample-pair picker, verdict badge, decision-aligned score gauge, log-odds margin, 8-stage pipeline view and in-memory session history.
 - `POST /api/v1/signature/inspect`: the `/signature/compare` result plus PNG renderings of the real pipeline intermediates, per-signal fusion contributions, thresholds and timing (`src/api/inspection.py`, `src/api/visuals.py`).
@@ -34,5 +39,6 @@ All notable changes to this project are documented here, following
 - `is_match` is true only for ACCEPT.
 
 ### Security
+- Content-Security-Policy and `X-Content-Type-Options: nosniff` on every response; inspect no longer returns raw exception text.
 - The API no longer reads server filesystem paths supplied by clients.
 - Header-only image-size checks (decompression-bomb guard), request size cap, strict Pydantic input validation, CORS allow-list, and account numbers masked in the audit chain.

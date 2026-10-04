@@ -3,6 +3,52 @@
 All numbers below are read from `benchmark/results/*.json` (byte-reproducible;
 see `DETERMINISM.md`). Full experiment history: `benchmark/experiments.md`.
 
+## Final result (October 2026): frozen 0–10 clearance score, 1:1 (one reference vs one questioned)
+
+The score (`benchmark/clearance_score.py`) was defined and frozen **before** any optimisation:
+`10 × (0.4·D + 0.3·R + 0.3·O)` with D = clean discrimination (skilled + random EER),
+R = skilled EER under 11 deterministic capture conditions (tinted paper, shadow, ruled lines,
+large canvas, printed text, faint ink, scale 0.5×/2×, rotation +20°/−15°, phone photo) and
+O = operating point at the production thresholds. More than 1% forgeries auto-matched caps it at 4.
+All images are harmonised first (removes the CEDAR scan-session shortcut, EXP-000).
+
+CEDAR, 55 writers, four disjoint image slices per writer: dev 1–6 (fitting only),
+validation 7–12 (every keep/revert decision), test 13–18 (milestones), **holdout 19–24 (scored once)**.
+
+| slice | baseline (b7e932a) | final | role |
+|---|---|---|---|
+| validation | 3.88 | **5.24** | drove decisions (optimistic) |
+| test | 5.26 | **6.00** | never tuned on |
+| **holdout** | **4.93** | **5.78** | scored exactly once |
+
+Holdout detail (`clearance_holdout_baseline.json` → `clearance_holdout_final.json`):
+
+| metric | baseline | final |
+|---|---|---|
+| clean skilled-forgery EER | 11.0% | **9.7%** |
+| clean different-writer EER | 3.9% | **2.9%** |
+| genuine MATCH / REVIEW / NO MATCH | 14.3 / 79.2 / 6.5% | **28.5 / 65.0 / 6.5%** |
+| skilled forgeries MATCH / NO MATCH | 0.0 / 77.2% | **0.0 / 81.1%** |
+| printed text near signature (EER) | 31.6% | **9.8%** |
+| rotation +20° / −15° (EER) | 17.2 / 19.6% | **13.4 / 13.9%** |
+| scale 0.5× / 2× (EER) | 17.4 / 13.1% | 17.2 / 12.8% |
+| phone-photo simulation (EER) | 12.4% | **10.4%** |
+| skilled MATCH in any capture condition | 0% | 0% |
+
+What changed (EXP-016…019): signature-ink isolation (printed text, ruled lines),
+stroke-quality signals (pressure pattern, curvature), calibration on harmonised images,
+out-of-fold percentile thresholds, symmetric stroke alignment. Rejected after measurement
+(EXP-020…024): elastic-deformation and local-pattern signals, preprocessing re-tune, the
+SigNet pretrained embedding (no gain; GPDS non-commercial weights) and pair-conditional
+scale/rotation invariance (better scale robustness, lower score; kept on branch
+`exp/scale-rotation-invariance`).
+
+**Honest reading.** The 7/10 target was not reached. With one reference, about two in three
+genuine signatures still go to manual review, and the forgery EER on clean scans is about
+9–12% depending on the slice. Validation gains overstate generalisation (+1.36 vs +0.85 on the
+holdout). The largest remaining lever is more than one reference specimen per customer
+(EXP-015: 3 specimens cut skilled EER by about a third), followed by real bank images.
+
 ## Update (EXP-015): 55-writer evaluation and stroke-level signals
 
 The numbers further down were measured on 12 writers with a two-signal fusion and are kept
