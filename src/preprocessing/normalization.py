@@ -136,8 +136,24 @@ def normalize_signature(image: np.ndarray) -> NormalizedSignature:
     darkness = (255.0 - harmonized.astype(np.float64)) / 255.0
     # Printed rules and caption text would otherwise set the crop (EXP-016).
     darkness = isolate_signature_ink(darkness, INK_MASK_LEVEL)
-    mask = darkness > INK_MASK_LEVEL
-    ys, xs = np.nonzero(mask)
+    ink_pixel_count = int(np.count_nonzero(darkness > INK_MASK_LEVEL))
+    x0, y0, w, h = _tight_crop_box(darkness)
+    return NormalizedSignature(
+        ink=darkness[y0:y0 + h, x0:x0 + w],
+        gray=harmonized,
+        bbox=(x0, y0, w, h),
+        ink_pixel_count=ink_pixel_count,
+        polarity_inverted=inverted,
+    )
+
+
+def _tight_crop_box(darkness: np.ndarray) -> Tuple[int, int, int, int]:
+    """(x, y, w, h) of the ink, ignoring the extreme CROP_TRIM_QUANTILE specks, plus a small margin.
+
+    Raises:
+        ValueError: if the map contains no detectable ink.
+    """
+    ys, xs = np.nonzero(darkness > INK_MASK_LEVEL)
     if len(ys) < 20:
         raise ValueError("No signature ink detected")
     y0, y1 = np.quantile(ys, [CROP_TRIM_QUANTILE, 1 - CROP_TRIM_QUANTILE], method="lower").astype(int)
@@ -145,13 +161,43 @@ def normalize_signature(image: np.ndarray) -> NormalizedSignature:
     y0, x0 = max(0, int(y0) - 2), max(0, int(x0) - 2)
     y1 = min(darkness.shape[0], int(y1) + 3)
     x1 = min(darkness.shape[1], int(x1) + 3)
-    return NormalizedSignature(
-        ink=darkness[y0:y1, x0:x1],
-        gray=harmonized,
-        bbox=(x0, y0, x1 - x0, y1 - y0),
-        ink_pixel_count=int(len(ys)),
-        polarity_inverted=inverted,
-    )
+    return x0, y0, x1 - x0, y1 - y0
+
+
+def rotate_ink(ink: np.ndarray, angle_deg: float) -> Tuple[np.ndarray, np.ndarray]:
+    """Rotate a cropped ink map about its centre and re-crop it tightly.
+
+    Uses OpenCV's convention (positive = counter-clockwise on screen) on an
+    expanded canvas so no ink is clipped; the paper fill is 0 (no ink).
+
+    Returns:
+        (rotated crop, 2x3 matrix mapping input-crop pixel coordinates to
+        rotated-crop pixel coordinates).
+
+    Raises:
+        ValueError: if no ink survives (cannot happen for a valid crop).
+    """
+    h, w = ink.shape
+    matrix = cv2.getRotationMatrix2D((w / 2.0, h / 2.0), angle_deg, 1.0)
+    cos, sin = abs(matrix[0, 0]), abs(matrix[0, 1])
+    new_w, new_h = int(np.ceil(h * sin + w * cos)), int(np.ceil(h * cos + w * sin))
+    matrix[0, 2] += new_w / 2.0 - w / 2.0
+    matrix[1, 2] += new_h / 2.0 - h / 2.0
+    rotated = cv2.warpAffine(ink, matrix, (new_w, new_h), flags=cv2.INTER_LINEAR, borderValue=0.0)
+    x0, y0, cw, ch = _tight_crop_box(rotated)
+    matrix[0, 2] -= x0
+    matrix[1, 2] -= y0
+    return rotated[y0:y0 + ch, x0:x0 + cw], matrix
+
+
+def letterbox_transform(shape: Tuple[int, int], width: int, height: int) -> np.ndarray:
+    """2x3 matrix mapping crop pixel coordinates onto `canonicalize(..., keep_aspect=True)`'s canvas."""
+    h, w = shape
+    scale = min(width / w, height / h)
+    nw, nh = max(1, int(round(w * scale))), max(1, int(round(h * scale)))
+    sx, sy = nw / w, nh / h
+    x0, y0 = (width - nw) // 2, (height - nh) // 2
+    return np.array([[sx, 0.0, x0], [0.0, sy, y0]])
 
 
 def canonicalize(ink: np.ndarray, width: int, height: int, keep_aspect: bool) -> np.ndarray:

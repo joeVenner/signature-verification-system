@@ -2,45 +2,45 @@
  "multi": {
   "cv_heldout_counts": {
    "genuine": {
-    "accept": 222,
+    "accept": 167,
     "n": 330,
     "reject": 10
    },
    "random": {
     "accept": 0,
     "n": 6480,
-    "reject": 6473
+    "reject": 6466
    },
    "skilled": {
-    "accept": 11,
+    "accept": 9,
     "n": 1980,
-    "reject": 1742
+    "reject": 1685
    }
   },
   "oof_counts": {
    "genuine": {
-    "accept": 109,
+    "accept": 81,
     "n": 330,
     "reject": 16
    },
    "random": {
     "accept": 0,
     "n": 6480,
-    "reject": 6480
+    "reject": 6468
    },
    "skilled": {
     "accept": 0,
     "n": 1980,
-    "reject": 1836
+    "reject": 1799
    }
   },
   "production": {
-   "accept": 8.759890803041404,
-   "hard_reject": -1.0847490903508614,
-   "reject": 2.5910804929814617
+   "accept": 10.196826279668617,
+   "hard_reject": -0.9531020213585819,
+   "reject": 2.437186277202116
   },
   "rule": {
-   "accept_margin": 1.5,
+   "accept_margin": 2.5,
    "max_random_match": 0.001,
    "max_skilled_match": 0.0025,
    "reject_genuine_quantile": 0.05
@@ -49,9 +49,26 @@
  "single": {
   "cv_heldout_counts": {
    "genuine": {
-    "accept": 439,
+    "accept": 444,
     "n": 825,
-    "reject": 37
+    "reject": 38
+   },
+   "random": {
+    "accept": 0,
+    "n": 2931,
+    "reject": 2917
+   },
+   "skilled": {
+    "accept": 9,
+    "n": 1980,
+    "reject": 1430
+   }
+  },
+  "oof_counts": {
+   "genuine": {
+    "accept": 283,
+    "n": 825,
+    "reject": 41
    },
    "random": {
     "accept": 0,
@@ -59,32 +76,15 @@
     "reject": 2925
    },
    "skilled": {
-    "accept": 7,
+    "accept": 2,
     "n": 1980,
-    "reject": 1479
-   }
-  },
-  "oof_counts": {
-   "genuine": {
-    "accept": 272,
-    "n": 825,
-    "reject": 41
-   },
-   "random": {
-    "accept": 0,
-    "n": 2931,
-    "reject": 2929
-   },
-   "skilled": {
-    "accept": 1,
-    "n": 1980,
-    "reject": 1554
+    "reject": 1528
    }
   },
   "production": {
-   "accept": 6.368525657695674,
-   "hard_reject": -5.590888762259887,
-   "reject": -0.6513516128805179
+   "accept": 6.247949976054851,
+   "hard_reject": -5.62388290443149,
+   "reject": -0.675930469850222
   },
   "rule": {
    "accept_margin": 1.0,

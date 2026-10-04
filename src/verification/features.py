@@ -26,6 +26,7 @@ import numpy as np
 from signature_verification_system.src.core.config import DEFAULT_CONFIG, RepresentationParams
 from signature_verification_system.src.core.determinism import configure_determinism
 from signature_verification_system.src.preprocessing.normalization import (
+    INK_MASK_LEVEL,
     NormalizedSignature,
     canonicalize,
     normalize_signature,
@@ -47,6 +48,9 @@ class SignatureFeatures:
     aspect_ratio: float                   # crop width / height
     ink_density: float                    # fraction of crop pixels that are ink
     stroke: StrokeGeometry                # stroke-level descriptors (direction, slant, profiles, width)
+    # Kept so a comparison can re-extract this image at a lower resolution (EXP-021).
+    source_image: Optional[np.ndarray] = None   # the image exactly as passed to extract_features
+    ink_radius: float = 0.0                     # ink radius of gyration in source pixels
 
 
 def gradient_grid_descriptor(canvas: np.ndarray, rows: int, cols: int, bins: int, blur_sigma: float) -> np.ndarray:
@@ -71,7 +75,6 @@ def gradient_grid_descriptor(canvas: np.ndarray, rows: int, cols: int, bins: int
 # so behaviour never depends on call order. See src/core/determinism.py.
 configure_determinism()
 
-
 def _sift() -> "cv2.SIFT":
     """Fresh detector per call: no shared mutable state across threads."""
     return cv2.SIFT_create()
@@ -86,6 +89,21 @@ def keypoint_descriptors(ink: np.ndarray, width: int, height: int) -> tuple[np.n
     pts = np.float32([k.pt for k in kps])
     order = np.lexsort((des.sum(axis=1), pts[:, 0], pts[:, 1]))
     return pts[order], des[order]
+
+
+def ink_radius_of_gyration(ink: np.ndarray) -> float:
+    """Darkness-weighted RMS distance of ink pixels from their centroid (pixels).
+
+    Rotation invariant and exactly proportional to image scale, unlike the crop
+    box (which grows when the signature is rotated).
+    """
+    ys, xs = np.nonzero(ink > INK_MASK_LEVEL)
+    if len(ys) == 0:
+        return 0.0
+    weights = ink[ys, xs]
+    var_x = np.average((xs - np.average(xs, weights=weights)) ** 2, weights=weights)
+    var_y = np.average((ys - np.average(ys, weights=weights)) ** 2, weights=weights)
+    return float(np.sqrt(var_x + var_y))
 
 
 def extract_features(image: np.ndarray, params: Optional[RepresentationParams] = None) -> SignatureFeatures:
@@ -104,4 +122,26 @@ def extract_features(image: np.ndarray, params: Optional[RepresentationParams] =
         aspect_ratio=float(w) / float(h),
         ink_density=float(np.mean(norm.ink > 0.25)),
         stroke=extract_stroke_geometry(norm.ink, p.stroke, p.keypoint_canvas_width, p.keypoint_canvas_height),
+        source_image=image,
+        ink_radius=ink_radius_of_gyration(norm.ink),
     )
+
+
+def downsampled_features(
+    features: SignatureFeatures, factor: float, params: Optional[RepresentationParams] = None
+) -> SignatureFeatures:
+    """Re-extract `features` from its source image shrunk by `factor` (< 1).
+
+    Returns `features` unchanged when there is no source image, `factor` >= 1 (the
+    pair-level scale harmonisation only ever downsamples, EXP-021), or the shrunk
+    image no longer has detectable ink (extreme size mismatch): comparing at native
+    resolution is then the only option, and it is what the system did before.
+    """
+    if features.source_image is None or factor >= 1.0:
+        return features
+    h, w = features.source_image.shape[:2]
+    size = (max(8, round(w * factor)), max(8, round(h * factor)))
+    try:
+        return extract_features(cv2.resize(features.source_image, size, interpolation=cv2.INTER_AREA), params)
+    except ValueError:
+        return features

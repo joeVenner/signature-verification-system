@@ -53,20 +53,20 @@ class DecisionThresholds(BaseModel):
     specimen is far less discriminative than several (EXP-003).
     """
     accept_margin_logit: float = Field(default=1.0)
-    multi_accept_margin_logit: float = Field(default=1.5)
+    multi_accept_margin_logit: float = Field(default=2.5)  # 1.5 -> 2.5: nested multi skilled MATCH 0.81% -> 0.45% (EXP-021)
     reject_genuine_quantile: float = Field(default=0.05)
     max_skilled_match_rate: float = Field(default=0.0025)
     max_random_match_rate: float = Field(default=0.001)
-    single_accept_logit: float = Field(default=6.3685)
-    single_reject_logit: float = Field(default=-0.6514)
-    single_hard_reject_logit: float = Field(default=-5.5909)
-    multi_accept_logit: float = Field(default=8.7599)
-    multi_reject_logit: float = Field(default=2.5911)
-    multi_hard_reject_logit: float = Field(default=-1.0847)
+    single_accept_logit: float = Field(default=6.2479)
+    single_reject_logit: float = Field(default=-0.6759)
+    single_hard_reject_logit: float = Field(default=-5.6239)
+    multi_accept_logit: float = Field(default=10.1968)
+    multi_reject_logit: float = Field(default=2.4372)
+    multi_hard_reject_logit: float = Field(default=-0.9531)
     selected_on: str = Field(
         default="benchmark/select_thresholds.py on CEDAR-55w dev split, harmonized images, --max-random 6000 "
                 "--max-random-per-query 40, out-of-fold logits (single: 1:1 protocol; multi: 3-specimen "
-                "protocol; rule EXP-018, reselected for the EXP-019 fusion)"
+                "protocol; rule EXP-018, reselected for the EXP-021 fusion)"
     )
 
 
@@ -132,6 +132,21 @@ class RepresentationParams(BaseModel):
     align_min_scale: float = Field(default=0.6, description="Min plausible relative scale")
     align_max_scale: float = Field(default=1.6, description="Max plausible relative scale")
     align_blur_sigma: float = Field(default=4.0, description="Blur for the aligned shape descriptor (2x canvas)")
+    # Capture invariance (EXP-021). fit_fusion CV clean skilled EER 9.59% -> 9.81% (dev).
+    # Writer-disjoint CV EER on dev (base -> derotation only): rotate_+20 13.4% -> 13.0%,
+    # rotate_-15 13.6% -> 12.5%, clean 9.4% -> 9.6%. The query is derotated when the trusted keypoint
+    # transform reports 10-30 deg. Below 10 deg it is left as it is: clean genuine pairs
+    # differ by up to ~6 deg (keypoint p10/p90) and derotating at 5-8 deg cost 0.3-0.5 pt
+    # clean EER on dev.
+    derotate_min_deg: float = Field(default=10.0, description="Smallest relative rotation at which the query is derotated")
+    derotate_max_deg: float = Field(default=30.0, description="Largest plausible capture rotation to undo")
+    # Pair-level scale harmonisation: outside this band of ink radius-of-gyration
+    # ratios (specimen / query) the larger image is re-extracted downsampled to match.
+    # Fixed a priori (+-25%) before any fused result was seen. Clean dev pairs outside the
+    # band: genuine 1.9%, skilled 22%, random 58%. Dev EER with the pre-refit fusion:
+    # scale_0.5 13.9% -> 9.6%, scale_2.0 12.7% -> 8.8% (genuine auto-reject 2.3% / 3.0%).
+    scale_band_low: float = Field(default=0.8, description="Lowest radius ratio left as is")
+    scale_band_high: float = Field(default=1.25, description="Highest radius ratio left as is")
     stroke: StrokeParams = Field(default_factory=StrokeParams)
 
 
@@ -149,19 +164,20 @@ class FusionModel(BaseModel):
     the two alignment directions); CV skilled EER 10.58% -> 9.59%.
     """
     signal_weights: Dict[str, float] = Field(default_factory=lambda: {
-        "keypoint": 15.751,
-        "stroke_direction": 9.070,
-        "slant": 13.343,
-        "column_profile": 3.975,
-        "row_profile": 4.949,
-        "stroke_width": 5.043,
-        "pressure_pattern": 8.809,
-        "curvature": 29.641,
+        "keypoint": 16.719,
+        "stroke_direction": 8.533,
+        "slant": 11.306,
+        "column_profile": 4.273,
+        "row_profile": 4.433,
+        "stroke_width": 4.792,
+        "pressure_pattern": 9.508,
+        "curvature": 27.955,
     })
-    bias: float = Field(default=-57.084)
+    bias: float = Field(default=-53.217)
     fitted_on: str = Field(
         default="CEDAR-55w dev split (writers 1-55, genuine 1-6, forgeries 1-6), harmonized images, "
-                "1:1 protocol, --max-random 6000, balanced L2-LR C=0.1, symmetric stroke alignment (EXP-019)",
+                "1:1 protocol, --max-random 6000, balanced L2-LR C=0.1, symmetric stroke alignment (EXP-019), "
+                "capture invariance (EXP-021)",
         description="Provenance of the coefficients",
     )
 

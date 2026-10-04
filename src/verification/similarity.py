@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Dict, Mapping, Optional, Sequence
+from typing import Dict, Mapping, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -15,9 +15,22 @@ from signature_verification_system.src.core.config import (
     FusionModel,
     RepresentationParams,
 )
-from signature_verification_system.src.preprocessing.normalization import canonicalize
-from signature_verification_system.src.verification.features import SignatureFeatures, gradient_grid_descriptor
-from signature_verification_system.src.verification.stroke_geometry import StrokeSignals, stroke_signals
+from signature_verification_system.src.preprocessing.normalization import (
+    canonicalize,
+    letterbox_transform,
+    rotate_ink,
+)
+from signature_verification_system.src.verification.features import (
+    SignatureFeatures,
+    downsampled_features,
+    gradient_grid_descriptor,
+)
+from signature_verification_system.src.verification.stroke_geometry import (
+    StrokeGeometry,
+    StrokeSignals,
+    extract_stroke_geometry,
+    stroke_signals,
+)
 
 
 @dataclass(frozen=True)
@@ -117,6 +130,58 @@ def aligned_shape(
     return Alignment(rotation, scale, float(np.clip(np.dot(da, db), 0.0, 1.0)))
 
 
+def derotation_angle(k: KeypointMatch, params: Optional[RepresentationParams] = None) -> Optional[float]:
+    """Rotation (degrees, OpenCV convention) that undoes the query's rotation, or None.
+
+    Slant, ink profiles and stroke width are measured in the image frame, so a
+    questioned signature captured at an angle loses on all of them although the
+    strokes are the same. When the RANSAC keypoint transform is trustworthy and
+    reports a rotation in [derotate_min_deg, derotate_max_deg], the query is
+    turned back into the specimen's frame before its stroke signals are measured.
+    Small rotations are left alone: they are within normal writer variation and
+    their estimates are noisy (see config.RepresentationParams.derotate_min_deg).
+    """
+    p = params or DEFAULT_CONFIG.representation
+    if k.transform is None or k.inliers < p.align_min_inliers:
+        return None
+    m = k.transform
+    scale = float(np.hypot(m[0, 0], m[1, 0]))
+    if not (p.align_min_scale < scale < p.align_max_scale):
+        return None
+    # The transform maps specimen -> query in image coordinates (y down), so the
+    # query is turned by -rotation in OpenCV's counter-clockwise convention.
+    rotation = float(np.degrees(np.arctan2(m[1, 0], m[0, 0])))
+    if not (p.derotate_min_deg <= abs(rotation) <= p.derotate_max_deg):
+        return None
+    return rotation
+
+
+def _query_stroke_geometry(
+    a: SignatureFeatures, b: SignatureFeatures, k: KeypointMatch, p: RepresentationParams
+) -> Tuple[StrokeGeometry, Optional[np.ndarray]]:
+    """Stroke geometry of the query in the specimen's frame, plus the ICP seed transform.
+
+    The keypoint transform seeds the stroke alignment when it is trustworthy;
+    after derotation it is re-expressed in the derotated query's canvas
+    (specimen canvas -> query canvas -> query crop -> derotated crop -> its canvas).
+    """
+    seed = _trusted_seed(k, p)
+    angle = derotation_angle(k, p)
+    if angle is None:
+        return b.stroke, seed
+    w, h = p.keypoint_canvas_width, p.keypoint_canvas_height
+    upright, crop_rotation = rotate_ink(b.normalized.ink, angle)
+    to_canvas = _homogeneous(letterbox_transform(upright.shape, w, h))
+    from_canvas = np.linalg.inv(_homogeneous(letterbox_transform(b.normalized.ink.shape, w, h)))
+    seed = (to_canvas @ _homogeneous(crop_rotation) @ from_canvas @ _homogeneous(k.transform))[:2]
+    return extract_stroke_geometry(upright, p.stroke, w, h), seed
+
+
+def _homogeneous(affine: np.ndarray) -> np.ndarray:
+    """3x3 homogeneous form of a 2x3 affine matrix."""
+    return np.vstack([np.asarray(affine, dtype=np.float64), [0.0, 0.0, 1.0]])
+
+
 def proportion_agreement(a: SignatureFeatures, b: SignatureFeatures) -> float:
     """exp(-|log aspect-ratio ratio|): 1.0 = identical width:height proportions."""
     return float(np.exp(-abs(np.log(a.aspect_ratio / b.aspect_ratio))))
@@ -177,6 +242,30 @@ def _reverse_aligned_signals(a: SignatureFeatures, b: SignatureFeatures, p: Repr
     return stroke_signals(b.stroke, a.stroke, _trusted_seed(keypoint_similarity(b, a, p), p), p.stroke)
 
 
+def harmonize_scale(
+    a: SignatureFeatures, b: SignatureFeatures, params: Optional[RepresentationParams] = None
+) -> Tuple[SignatureFeatures, SignatureFeatures]:
+    """Bring two signatures to a common ink size by downsampling the larger one (EXP-021).
+
+    Photometric normalisation works in native pixels (denoising window, paper kernel,
+    ink blur), so the same signature scanned at another resolution comes out with
+    relatively fatter or thinner strokes (stroke width +35% at 0.5x, -17% at 2x on
+    dev). When the ink radius-of-gyration ratio leaves [scale_band_low,
+    scale_band_high], the larger image is re-extracted from its source, shrunk so both
+    radii match. Only ever downsamples (no invented detail); pairs inside the band,
+    which is nearly every same-resolution pair, are returned untouched.
+    """
+    p = params or DEFAULT_CONFIG.representation
+    if a.ink_radius <= 0 or b.ink_radius <= 0:
+        return a, b
+    ratio = a.ink_radius / b.ink_radius
+    if p.scale_band_low <= ratio <= p.scale_band_high:
+        return a, b
+    if ratio > 1.0:
+        return downsampled_features(a, 1.0 / ratio, p), b
+    return a, downsampled_features(b, ratio, p)
+
+
 def compare(
     a: SignatureFeatures,
     b: SignatureFeatures,
@@ -194,13 +283,19 @@ def compare(
     """
     f = fusion or DEFAULT_CONFIG.fusion
     p = params or DEFAULT_CONFIG.representation
+    a, b = harmonize_scale(a, b, p)
     k = keypoint_similarity(a, b, p)
     alignment = aligned_shape(a, b, k, p)
     unaligned = shape_similarity(a, b)
     used = alignment is not None and alignment.shape_similarity > unaligned
     layout = alignment.shape_similarity if used else unaligned
-    strokes = stroke_signals(a.stroke, b.stroke, _trusted_seed(k, p), p.stroke)
-    reverse = _reverse_aligned_signals(a, b, p)
+    query_stroke, seed = _query_stroke_geometry(a, b, k, p)
+    strokes = stroke_signals(a.stroke, query_stroke, seed, p.stroke)
+    if query_stroke is b.stroke:
+        reverse = _reverse_aligned_signals(a, b, p)
+    else:
+        # Derotated query: the reverse alignment starts from the inverse of the forward seed.
+        reverse = stroke_signals(query_stroke, a.stroke, np.linalg.inv(_homogeneous(seed))[:2], p.stroke)
     signals = {
         "layout": layout,
         "keypoint": k.similarity,
