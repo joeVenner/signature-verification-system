@@ -1250,3 +1250,16 @@ differences below ~2 EER points are within noise.
   of accuracy, the GPDS non-commercial restriction would block banking use of these weights.
   Other released GPDS-family extractors (`sigver_wiwd`: SigNet-SPP 300/600 dpi) exist only
   as Lasagne pickles and were not loaded (no execution of downloaded pickles).
+
+## EXP-024 — Pair-conditional scale harmonisation + keypoint-gated derotation (not merged)
+
+* Branch `exp/scale-rotation-invariance` (1034e50). When the two signatures' ink radius of
+  gyration differs by more than [0.8, 1.25], the larger image is re-extracted downsampled
+  (never upsampled); the questioned ink is derotated when the keypoint transform reports
+  10-30 degrees. Band fixed before results.
+* Dev writer-disjoint CV clean skilled EER 9.59% -> 9.81%; random 1.70% -> 2.18%.
+* Val clearance score 5.24 -> **5.17** (D 0.602, R 0.468, O 0.452): scale 0.5x EER 18.4% -> 12.7%,
+  scale 2x 17.2% -> 13.0%, rotation +20 14.3% -> 14.9%, -15 16.3% -> 16.3%, clean 11.76% -> 12.37%.
+* Cost: cross-writer pair comparison 9.6 -> 31.5 ms (re-extraction).
+* Not merged: lower frozen score. Kept on its branch because it is the better choice when
+  reference and questioned images come at very different resolutions.
