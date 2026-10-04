@@ -885,7 +885,9 @@ differences below ~2 EER points are within noise.
   | **pressure + curvature** | | **10.55** | both folds improve (11.20/10.88 -> 9.74/9.37) |
 
   Session test: different-writer pairs only, genuine(w1)-genuine(w2) vs genuine(w1)-forgery(w2);
-  the existing stroke_width and slant score 0.456 / 0.463 on it.
+  the existing stroke_width and slant score 0.456 / 0.463 on it. Re-run on the shipped
+  code (curvature on the 512x256 canvas, not the 1024x512 prototype): curvature 0.477,
+  pressure_pattern 0.508.
 * **Shipped:** `pressure_pattern` and `curvature` in `stroke_geometry.py` (one shared ICP
   alignment and correspondence for direction and pressure). Refit on harmonized dev
   (`--max-random 6000`): CV skilled AUC 0.958, EER **10.58%**, random EER 2.18%; all weights
