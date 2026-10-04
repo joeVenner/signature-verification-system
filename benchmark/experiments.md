@@ -1147,3 +1147,51 @@ differences below ~2 EER points are within noise.
   alone (AUC 0.86-0.92) but carry no information beyond direction x coverage and
   pressure x coverage. Production code, fusion, thresholds and evidence reference are
   unchanged (val 5.24 stands; not re-scored).
+
+## EXP-022 — Preprocessing / stroke-extraction constants re-tuned for the stroke signals (rejected)
+
+* **Question:** the preprocessing constants (EXP-002/006) were chosen on 12 writers for the
+  old SIFT + gradient-grid signals. NLM denoising and ink smoothing could erode the
+  grayscale texture that `pressure_pattern` reads. Are they still right for the current 8
+  signals?
+* **Method (dev only):** grid declared before any non-base run: one factor at a time around
+  the shipped point, then one small joint grid of the 2 most promising factors. Each
+  setting re-extracts the 660 harmonized dev images (6 workers), recomputes `compare` on the
+  `fit_fusion` pair set (`--max-random 6000`) and refits with `fit_fusion._fit`; metric =
+  writer-disjoint 2-fold CV skilled EER. Base reproduces fit_fusion exactly (9.59%).
+  Bar: gain > 0.5 pt and writer-bootstrap (200 paired resamples of writers, OOF logits)
+  90% lower bound > 0, then dev capture conditions. Every run asserted its signal matrix
+  differs from base. INK_SMOOTH_SIGMA "0" was run as 0.3 (cv2 rejects sigma 0; a 3-tap
+  kernel with ~0.4% side weight). The 768x384 canvas is the shared keypoint/skeleton canvas;
+  variant (s) also scales the canvas-px parameters x1.5.
+* **Results** (17 configurations: 1 base + 14 OFAT + 2 joint; skilled EER %, AUC, random
+  EER %, per-fold EER at each fold's own threshold):
+
+  | setting | skilled EER | AUC | random EER | folds |
+  |---|---|---|---|---|
+  | base (h 12, σ 0.8, 2 passes, mask 0.25, 512x256, ICP 6 it, stride 4) | 9.59 | 0.9618 | 1.70 | 8.38 / 9.15 |
+  | DENOISE_STRENGTH 0 / 6 / 9 / 15 | 9.59 / 9.81 / 9.45 / 9.67 | 0.9632 / 0.9602 / 0.9623 / 0.9633 | 1.70 / 2.18 / 1.81 / 1.72 | |
+  | INK_SMOOTH_SIGMA 0 (0.3) / 0.5 / 1.2 | 9.94 / 9.94 / 9.94 | 0.9597 / 0.9592 / 0.9608 | 1.94 / 2.07 / 1.80 | |
+  | NORMALIZATION_PASSES 1 | 9.59 | 0.9621 | 1.94 | 9.04 / 8.87 |
+  | INK_MASK_LEVEL 0.2 / 0.3 | 9.70 / 9.72 | 0.9599 / 0.9641 | 1.94 / 1.57 | |
+  | canvas 768x384 / 768x384 (s) | 9.94 / 9.83 | 0.9597 / 0.9619 | 1.93 / 1.70 | |
+  | icp_point_stride 2 | 9.56 | 0.9633 | 1.57 | 8.82 / 8.87 |
+  | **icp_iterations 10** | **8.98** | 0.9631 | 1.70 | 8.55 / 8.87 |
+  | joint: ICP 10 + h 9 / ICP 10 + h 0 | 9.45 / 9.59 | 0.9613 / 0.9629 | 1.94 / 1.81 | |
+
+* **Bootstrap:** ICP 10 iterations gain 0.61 pt, bootstrap mean 0.40, 90% interval
+  **-0.36..0.96**, P(gain > 0) 0.82 -> fails the lower-bound bar. h 9: gain 0.14, interval
+  -1.08..0.72. ICP 10 is also the best of 17 settings picked on the scoring writers, and it
+  does not combine with the second-best factor (joint 9.45 / 9.59).
+* **Finding:** none of the photometric constants matters at this resolution: every
+  denoise / smoothing / passes / mask / canvas setting lies within -0.14..+0.35 pt of base,
+  well inside the bootstrap spread (90% intervals 1.3-1.8 pt wide). Turning NLM off does not help
+  `pressure_pattern` on clean dev (9.59, unchanged pooled; AUC +0.0014), so there is no
+  measured case for trading away the EXP-006 noise robustness. Likely reason: the frozen
+  benchmark `harmonize` already applies σ 0.8 smoothing and a 0.06 noise floor before the
+  pipeline sees the image.
+* **Decision: rejected; nothing changed.** No candidate passed, so no dev clearance
+  comparison, refit or val scoring was run (val 5.24 stands). If revisited, ICP iterations
+  is the only lead: test it with more dev data or fixed in advance, not chosen from this grid.
+* **Cost:** extraction of 660 dev images with 6 workers ~25 s per setting (10 s with NLM
+  off); compare of 8805 pairs ~24 s (35 s on the 768x384 canvas).
