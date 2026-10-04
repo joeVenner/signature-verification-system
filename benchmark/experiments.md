@@ -908,3 +908,54 @@ differences below ~2 EER points are within noise.
   next step.
 * **Cost:** serial, same 24 images: extraction 181 -> 179 ms, compare 7.7 -> 7.7 ms per pair
   (no measurable change; the extra work is ~1 ms each).
+
+## EXP-018 — Thresholds from out-of-fold logits (decision D-005)
+
+* **Problem:** the fusion is fitted on the dev pairs, so dev logits from the production
+  fusion are in-sample and over-separated. REJECT at their 5th genuine percentile became
+  8.0% genuine NOMATCH on val; ACCEPT (max impostor + 1.0) hung on one extreme value.
+* **Method (dev only):** `select_thresholds.py` refits the fusion (`fit_fusion._fit`, same
+  pair set `--max-random 6000`; full-dev refit reproduces the config weights exactly) on one
+  writer fold and scores the other -> out-of-fold (OOF) logits for every within-fold pair
+  (cross-fold random pairs dropped). Multi-specimen trials: the same fold fits on
+  max-aggregated signals. Rule estimate = **nested**: rule selected on inner OOF logits of the
+  training fold (split again by writer), counted on the test fold scored by the fold fit.
+  Fusion and cut-offs never see the test writers.
+* **Finding:** pooled-OOF rates are tautological (the rule hits its own quantile). Nested
+  skilled MATCH runs above the target because a fit on more writers has a larger weight norm
+  (full 43.6, folds 34.3 / 42.9, inner 26-44): thresholds read from a smaller fit are lenient
+  for the bigger one. The margin absorbs this gap and is sized on the nested check.
+* **Single-specimen candidates** (dev, n = 825 genuine / 1980 skilled / 2931 random;
+  nested held-out; reject = q5 genuine OOF in all rows; random MATCH 0 in all rows):
+
+  | accept rule | accept | gen MATCH | gen NOMATCH | skl MATCH | skl NOMATCH | O-like |
+  |---|---|---|---|---|---|---|
+  | max impostor + 1.0 (old rule, OOF) | 6.473 | 49.3% | 3.9% | 0.15% | 68.3% | 0.549 |
+  | q99.5 skilled + 0 | 4.038 | 71.4% | 3.9% | 1.26% | 68.3% | 0.660 |
+  | q99.5 skilled + 0.5 | 4.538 | 64.4% | 3.9% | 0.91% | 68.3% | 0.624 |
+  | q99.75 skilled + 0.5 | 5.012 | 62.6% | 3.9% | 0.61% | 68.3% | 0.615 |
+  | q99.9 skilled + 0.75 | 5.850 | 54.8% | 3.9% | 0.30% | 68.3% | 0.577 |
+  | **q99.75 skilled + 1.0** | **5.512** | **54.9%** | **3.9%** | **0.30%** | **68.3%** | **0.577** |
+  | q99.5 skilled + 1.25 | 5.288 | 54.8% | 3.9% | 0.30% | 68.3% | 0.577 |
+
+  The random term (q99.9) never binds. Reject q4 instead of q5: nested genuine NOMATCH
+  3.2%, O-like 0.620 vs 0.645 (at q99.75 + 0), so q5 kept. Per outer fold the chosen rule
+  gives skilled MATCH 1/1008 and 5/972, genuine NOMATCH 22/420 (5.2%) and 10/405.
+* **Multi-specimen** (n = 330 / 1980 / 6480): even the old max-impostor + 1.0 rule gives
+  nested skilled MATCH 0.81% on OOF logits (signal-wise max amplifies the scale gap); the
+  same quantiles need margin 1.5: q99.75 skilled + 1.5 -> genuine MATCH 64.8%, NOMATCH 3.9%,
+  skilled MATCH 0.35%, random 0%.
+* **Shipped rule:** accept = max(q99.75 skilled OOF, q99.9 random OOF) + margin (single 1.0,
+  multi 1.5); reject = q5 genuine OOF; hard_reject = min genuine OOF. Thresholds old -> new:
+  single accept 6.3645 -> **5.5123**, reject -0.0803 -> **-0.6729**, hard -4.1280 -> -5.5863;
+  multi accept 8.5690 -> **8.3837**, reject 3.0381 -> **2.2261**, hard 0.5526 -> 0.0533.
+  `evidence_reference.json` band reliability now holds the nested counts (signal quantiles
+  unchanged). Fusion weights and features unchanged.
+* **Val clearance (reported once):** 4.98 -> **5.06** (D 0.599, R 0.409, O 0.454 -> **0.479**,
+  gate off). Operating point: genuine MATCH 28.2 -> 36.8 / REVIEW 58.1 / NOMATCH 8.0 -> 5.1%;
+  skilled MATCH 0.1 -> 0.3 / NOMATCH 78.5 -> 69.1%; random MATCH 0.0 / NOMATCH 99.4%. No
+  condition exceeds 0.5% skilled MATCH (max faint_ink 0.4%). Genuine NOMATCH remains
+  15.9-20.6% under scale / rotation.
+* **Limits:** dev has only ~10 skilled pairs per 0.5%, so the skilled tail is coarse;
+  hard_reject still rests on one extreme genuine (not scored); val genuine NOMATCH 5.1%
+  sits just above the 5% target.
