@@ -1,0 +1,137 @@
+{
+ "capture_conditions": {
+  "distractor_print": {
+   "auc_skilled": 0.768639,
+   "eer_skilled": 0.308838,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.991515,
+   "r": 0.0,
+   "skilled_MATCH": 0.0
+  },
+  "faint_ink": {
+   "auc_skilled": 0.957324,
+   "eer_skilled": 0.095859,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.048485,
+   "r": 0.616566,
+   "skilled_MATCH": 0.0
+  },
+  "large_canvas_offcentre": {
+   "auc_skilled": 0.953357,
+   "eer_skilled": 0.090909,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.048485,
+   "r": 0.636364,
+   "skilled_MATCH": 0.0
+  },
+  "phone_photo": {
+   "auc_skilled": 0.951044,
+   "eer_skilled": 0.104394,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.053333,
+   "r": 0.582424,
+   "skilled_MATCH": 0.0
+  },
+  "rotate_+20": {
+   "auc_skilled": 0.902219,
+   "eer_skilled": 0.182929,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.317576,
+   "r": 0.268283,
+   "skilled_MATCH": 0.0
+  },
+  "rotate_-15": {
+   "auc_skilled": 0.89094,
+   "eer_skilled": 0.190354,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.193939,
+   "r": 0.238586,
+   "skilled_MATCH": 0.0
+  },
+  "ruled_lines": {
+   "auc_skilled": 0.931049,
+   "eer_skilled": 0.126162,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.090909,
+   "r": 0.495354,
+   "skilled_MATCH": 0.0
+  },
+  "scale_0.5": {
+   "auc_skilled": 0.918758,
+   "eer_skilled": 0.158687,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.107879,
+   "r": 0.365253,
+   "skilled_MATCH": 0.0
+  },
+  "scale_2.0": {
+   "auc_skilled": 0.938615,
+   "eer_skilled": 0.124798,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.106667,
+   "r": 0.500808,
+   "skilled_MATCH": 0.0
+  },
+  "shadow_gradient": {
+   "auc_skilled": 0.942177,
+   "eer_skilled": 0.101919,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.064242,
+   "r": 0.592323,
+   "skilled_MATCH": 0.0
+  },
+  "tinted_paper": {
+   "auc_skilled": 0.953372,
+   "eer_skilled": 0.093384,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.048485,
+   "r": 0.626465,
+   "skilled_MATCH": 0.0
+  }
+ },
+ "clean": {
+  "auc_random": 0.990737,
+  "auc_skilled": 0.951491,
+  "eer_random": 0.037621,
+  "eer_skilled": 0.093131,
+  "extraction_failures": 0,
+  "operating_point": {
+   "genuine": {
+    "MATCH": 0.15878787878787878,
+    "NOMATCH": 0.052121212121212124,
+    "REVIEW": 0.7890909090909091,
+    "n": 825
+   },
+   "random": {
+    "MATCH": 0.0,
+    "NOMATCH": 0.988,
+    "REVIEW": 0.012,
+    "n": 3000
+   },
+   "skilled": {
+    "MATCH": 0.0,
+    "NOMATCH": 0.7378787878787879,
+    "REVIEW": 0.26212121212121214,
+    "n": 1980
+   }
+  },
+  "thresholds": {
+   "accept": 6.4721,
+   "reject": -0.3264
+  }
+ },
+ "clean_score_sha256": "80af9b9b5525ccae56de5fbf19eba73d839c78861bc6e69b8591126d41c76e67",
+ "components": {
+  "D": 0.683,
+  "O": 0.3962,
+  "R": 0.4475
+ },
+ "n_pairs": {
+  "genuine": 825,
+  "random": 3000,
+  "skilled": 1980
+ },
+ "safety_gate_triggered": false,
+ "score": 5.263,
+ "seconds": 823.9
+}

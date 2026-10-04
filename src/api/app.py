@@ -7,6 +7,9 @@ Endpoints:
 - POST /api/v1/cheque/process: End-to-end cheque clearing pipeline (IQA, zone detection, crop, verify, adjudicate, audit)
 - GET  /api/v1/audit/recent: Retrieve recent immutable audit trail records
 - GET  /api/v1/audit/verify-chain: Verify SHA-256 cryptographic hash-chain integrity of audit ledger
+- POST /api/v1/signature/inspect: 1:1 comparison plus the real pipeline intermediates (live console)
+- GET  /api/v1/samples, /api/v1/samples/{id}: labelled sample gallery (only if SIGVERIFY_SAMPLES_DIR is set)
+- GET  /: live verification console (static UI)
 """
 
 from __future__ import annotations
@@ -16,11 +19,19 @@ import io
 import math
 import os
 
+from signature_verification_system.envfile import load_env_file
+
+# `.env` first, so its values reach OpenCV when cv2 is imported below (shell variables win).
+# Also applied by serve.py; repeated here so `uvicorn ...app:app` started directly behaves the
+# same. Idempotent: values already in the environment are never overwritten.
+load_env_file()
 # Defence in depth against decompression bombs: OpenCV's own decode ceiling.
 # Must be set before cv2 is first imported in the process.
-os.environ.setdefault("OPENCV_IO_MAX_IMAGE_PIXELS", "50000000")
+if not os.environ.get("OPENCV_IO_MAX_IMAGE_PIXELS"):   # unset or empty -> safe default
+    os.environ["OPENCV_IO_MAX_IMAGE_PIXELS"] = "50000000"
 import uuid
 from dataclasses import asdict
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 
@@ -29,7 +40,8 @@ import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, ValidationError
 
@@ -48,13 +60,29 @@ from signature_verification_system.src.adjudication.decision_engine import Decis
 from signature_verification_system.src.adjudication.audit_logger import AuditLogger
 from signature_verification_system.src.pipeline import ChequeVerificationPipeline
 from signature_verification_system.src.verification.signature_compare import SignatureComparison, compare_signatures
+from signature_verification_system.src.api.inspection import SignatureInspection, inspect_signatures
+from signature_verification_system.src.api.samples import (
+    IMAGE_SUFFIXES,
+    SampleCatalog,
+    SampleList,
+    catalog_from_env,
+)
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 # Input limits: reject oversized payloads before decoding (decompression-bomb guard).
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 MAX_IMAGE_PIXELS = 50_000_000
 MAX_ADDITIONAL_SPECIMENS = 9
 MAX_COMPARE_REFERENCES = 10
+DEFAULT_AUDIT_DB_PATH = "audit_ledger.db"
+DEFAULT_AUDIT_JSONL_PATH = "audit_ledger.jsonl"
 MAX_REQUEST_BYTES = 64 * 1024 * 1024   # whole-request cap (Content-Length); enforce at the proxy too
+# The console renders images from data:/blob: URLs and loads only Google Fonts; nothing else is allowed.
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; img-src 'self' data: blob:; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com"
+)
 MAX_TEXT_FIELD = 64
 CURRENCY_PATTERN = r"^[A-Z]{3}$"
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -128,6 +156,14 @@ class Base64SignatureCompareRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     reference_images: List[str] = Field(..., min_length=1, max_length=MAX_COMPARE_REFERENCES,
                                         description="Base64 reference signature(s) of the account holder")
+    questioned_image: str = Field(..., description="Base64 signature to verify")
+
+
+class Base64SignatureInspectRequest(BaseModel):
+    """Same fields as the compare request, restricted to exactly one reference (1:1)."""
+    model_config = ConfigDict(extra="ignore")
+    reference_images: List[str] = Field(..., min_length=1, max_length=1,
+                                        description="Exactly one base64 reference signature")
     questioned_image: str = Field(..., description="Base64 signature to verify")
 
 
@@ -282,10 +318,20 @@ def create_app(
     decision_engine: Optional[DecisionEngine] = None,
     verifier: Optional[DeterministicVerifier] = None,
     locator: Optional[SignatureLocator] = None,
+    samples: Optional[SampleCatalog] = None,
 ) -> FastAPI:
-    """Instantiate and configure the FastAPI application."""
+    """Instantiate and configure the FastAPI application.
+
+    `samples` overrides the sample gallery; by default it is loaded from the
+    SIGVERIFY_SAMPLES_DIR environment variable (gallery disabled when unset).
+    """
+    sample_catalog = samples if samples is not None else catalog_from_env()
     app_config = config or DEFAULT_CONFIG
-    logger = audit_logger or AuditLogger(config=app_config)
+    logger = audit_logger or AuditLogger(
+        db_path=os.environ.get("SIGVERIFY_AUDIT_DB_PATH") or DEFAULT_AUDIT_DB_PATH,
+        jsonl_path=os.environ.get("SIGVERIFY_AUDIT_JSONL_PATH") or DEFAULT_AUDIT_JSONL_PATH,
+        config=app_config,
+    )
     engine = decision_engine or DecisionEngine(config=app_config)
     sig_verifier = verifier or DeterministicVerifier(config=app_config)
     sig_locator = locator or SignatureLocator()
@@ -303,7 +349,7 @@ def create_app(
 
     # Explicit origin allow-list from the environment; no credentials (the API is
     # unauthenticated, see SECURITY notes in benchmark/experiments.md EXP-010).
-    origins = [o.strip() for o in os.environ.get("SIGVERIFY_CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()]
+    origins = [o.strip() for o in (os.environ.get("SIGVERIFY_CORS_ORIGINS") or "http://localhost:3000").split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
@@ -318,6 +364,13 @@ def create_app(
         if declared is not None and (not declared.isdigit() or int(declared) > MAX_REQUEST_BYTES):
             return JSONResponse(status_code=413, content={"detail": "Request body too large."})
         return await call_next(request)
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        return response
 
     @app.exception_handler(ValueError)
     async def value_error_handler(_: Request, __: ValueError) -> JSONResponse:
@@ -600,6 +653,52 @@ def create_app(
             questioned = await resolve_image(questioned_image)
         return await run_in_threadpool(compare_signatures, refs, questioned, sig_verifier)
 
+    @app.post("/api/v1/signature/inspect", response_model=SignatureInspection, tags=["Biometric Verification"])
+    async def inspect_signature_pair(
+        request: Request,
+        reference_images: Optional[List[UploadFile]] = File(None),
+        questioned_image: Optional[UploadFile] = File(None),
+    ) -> SignatureInspection:
+        """1:1 comparison returning the `/signature/compare` result plus pipeline visuals.
+
+        Same inputs and limits as `/signature/compare`, but exactly one reference.
+        Visuals are PNGs (base64) rendered from the intermediates of the same
+        deterministic pipeline; the signal breakdown is included only when its
+        log-odds provably equals the verdict's.
+        """
+        if "application/json" in request.headers.get("content-type", ""):
+            req = await parse_json_model(request, Base64SignatureInspectRequest)
+            ref = decode_base64_image(req.reference_images[0])
+            questioned = decode_base64_image(req.questioned_image)
+        else:
+            uploads = [f for f in (reference_images or []) if f is not None]
+            if len(uploads) != 1:
+                raise HTTPException(status_code=400, detail="Provide exactly one 'reference_images' file.")
+            if questioned_image is None:
+                raise HTTPException(status_code=400, detail="Provide a 'questioned_image' file.")
+            ref = await resolve_image(uploads[0])
+            questioned = await resolve_image(questioned_image)
+        return await run_in_threadpool(inspect_signatures, ref, questioned, sig_verifier)
+
+    # ------------------------------------------------------------------------
+    # 4c. Sample gallery (operator-configured directory only)
+    # ------------------------------------------------------------------------
+    @app.get("/api/v1/samples", response_model=SampleList, tags=["Samples"])
+    async def list_samples() -> SampleList:
+        """Labelled sample pairs; 404 when SIGVERIFY_SAMPLES_DIR is not configured."""
+        if sample_catalog is None:
+            raise HTTPException(status_code=404, detail="Sample gallery is disabled.")
+        return SampleList(samples=list(sample_catalog.pairs))
+
+    @app.get("/api/v1/samples/{sample_id}", tags=["Samples"])
+    async def get_sample_image(sample_id: str) -> FileResponse:
+        """One sample image by its server-generated id (never a path)."""
+        path = sample_catalog.image(sample_id) if sample_catalog is not None else None
+        if path is None:
+            raise HTTPException(status_code=404, detail="Sample not found.")
+        return FileResponse(path, media_type=IMAGE_SUFFIXES[path.suffix.lower()],
+                            headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=3600"})
+
     # ------------------------------------------------------------------------
     # 5. Audit Ledger Endpoints
     # ------------------------------------------------------------------------
@@ -623,6 +722,8 @@ def create_app(
             verified_at_utc=datetime.now(timezone.utc).isoformat(),
         )
 
+    # Mounted last so it never shadows the API routes above.
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="console")
     return app
 
 

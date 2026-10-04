@@ -1,0 +1,137 @@
+{
+ "capture_conditions": {
+  "distractor_print": {
+   "auc_skilled": 0.967128,
+   "eer_skilled": 0.081263,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.038788,
+   "r": 0.674949,
+   "skilled_MATCH": 0.0
+  },
+  "faint_ink": {
+   "auc_skilled": 0.970951,
+   "eer_skilled": 0.089798,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.036364,
+   "r": 0.640808,
+   "skilled_MATCH": 0.0
+  },
+  "large_canvas_offcentre": {
+   "auc_skilled": 0.965,
+   "eer_skilled": 0.087576,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.038788,
+   "r": 0.649697,
+   "skilled_MATCH": 0.0
+  },
+  "phone_photo": {
+   "auc_skilled": 0.963441,
+   "eer_skilled": 0.098333,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.035152,
+   "r": 0.606667,
+   "skilled_MATCH": 0.0
+  },
+  "rotate_+20": {
+   "auc_skilled": 0.940979,
+   "eer_skilled": 0.132222,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.153939,
+   "r": 0.471111,
+   "skilled_MATCH": 0.0
+  },
+  "rotate_-15": {
+   "auc_skilled": 0.932577,
+   "eer_skilled": 0.140505,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.112727,
+   "r": 0.43798,
+   "skilled_MATCH": 0.0
+  },
+  "ruled_lines": {
+   "auc_skilled": 0.96777,
+   "eer_skilled": 0.088687,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.037576,
+   "r": 0.645253,
+   "skilled_MATCH": 0.0
+  },
+  "scale_0.5": {
+   "auc_skilled": 0.907404,
+   "eer_skilled": 0.174646,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.168485,
+   "r": 0.301414,
+   "skilled_MATCH": 0.0
+  },
+  "scale_2.0": {
+   "auc_skilled": 0.940436,
+   "eer_skilled": 0.134697,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.133333,
+   "r": 0.461212,
+   "skilled_MATCH": 0.0
+  },
+  "shadow_gradient": {
+   "auc_skilled": 0.956449,
+   "eer_skilled": 0.09202,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.048485,
+   "r": 0.631919,
+   "skilled_MATCH": 0.0
+  },
+  "tinted_paper": {
+   "auc_skilled": 0.967238,
+   "eer_skilled": 0.08596,
+   "extraction_failures": 0,
+   "genuine_NOMATCH": 0.031515,
+   "r": 0.656162,
+   "skilled_MATCH": 0.0
+  }
+ },
+ "clean": {
+  "auc_random": 0.996158,
+  "auc_skilled": 0.962565,
+  "eer_random": 0.025394,
+  "eer_skilled": 0.089798,
+  "extraction_failures": 0,
+  "operating_point": {
+   "genuine": {
+    "MATCH": 0.3321212121212121,
+    "NOMATCH": 0.04363636363636364,
+    "REVIEW": 0.6242424242424243,
+    "n": 825
+   },
+   "random": {
+    "MATCH": 0.0,
+    "NOMATCH": 0.9946666666666667,
+    "REVIEW": 0.005333333333333333,
+    "n": 3000
+   },
+   "skilled": {
+    "MATCH": 0.0,
+    "NOMATCH": 0.7540404040404041,
+    "REVIEW": 0.24595959595959596,
+    "n": 1980
+   }
+  },
+  "thresholds": {
+   "accept": 6.3685,
+   "reject": -0.6514
+  }
+ },
+ "clean_score_sha256": "5a9c6011779a616a6fcb8908cd13cec11da91f0c0afd3c8dcb3e9d4b2650f585",
+ "components": {
+  "D": 0.7052,
+  "O": 0.4994,
+  "R": 0.5616
+ },
+ "n_pairs": {
+  "genuine": 825,
+  "random": 3000,
+  "skilled": 1980
+ },
+ "safety_gate_triggered": false,
+ "score": 6.004,
+ "seconds": 1349.0
+}

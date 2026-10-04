@@ -17,6 +17,8 @@ from typing import Tuple
 import cv2
 import numpy as np
 
+from signature_verification_system.src.preprocessing.isolation import isolate_signature_ink
+
 PAPER_CLOSE_KERNEL = 15     # px; larger than any stroke width in 256-900 px crops
 PAPER_BLUR_SIGMA = 5.0
 INK_SMOOTH_SIGMA = 0.8
@@ -132,6 +134,8 @@ def normalize_signature(image: np.ndarray) -> NormalizedSignature:
     _, inverted = ensure_dark_ink(to_gray(image))
     harmonized = harmonize_photometric(image)
     darkness = (255.0 - harmonized.astype(np.float64)) / 255.0
+    # Printed rules and caption text would otherwise set the crop (EXP-016).
+    darkness = isolate_signature_ink(darkness, INK_MASK_LEVEL)
     mask = darkness > INK_MASK_LEVEL
     ys, xs = np.nonzero(mask)
     if len(ys) < 20:

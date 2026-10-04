@@ -8,6 +8,8 @@ Two complementary, writer-independent representations:
 * **Local keypoints** — SIFT keypoints/descriptors on the letter-boxed ink
   map. Compared with geometric (RANSAC) verification, they capture fine
   stroke detail that skilled forgers fail to reproduce in the right places.
+* **Stroke geometry** — skeleton, local stroke directions, ink profiles, slant
+  and pen width (see stroke_geometry.py): what a human examiner looks at.
 
 Determinism: SIFT runs single-threaded on a fixed-size uint8 canvas; keypoint
 order is made canonical by sorting.
@@ -28,6 +30,10 @@ from signature_verification_system.src.preprocessing.normalization import (
     canonicalize,
     normalize_signature,
 )
+from signature_verification_system.src.verification.stroke_geometry import (
+    StrokeGeometry,
+    extract_stroke_geometry,
+)
 
 
 @dataclass(frozen=True)
@@ -40,6 +46,7 @@ class SignatureFeatures:
     descriptors: Optional[np.ndarray]     # (N, 128) float32 SIFT descriptors or None
     aspect_ratio: float                   # crop width / height
     ink_density: float                    # fraction of crop pixels that are ink
+    stroke: StrokeGeometry                # stroke-level descriptors (direction, slant, profiles, width)
 
 
 def gradient_grid_descriptor(canvas: np.ndarray, rows: int, cols: int, bins: int, blur_sigma: float) -> np.ndarray:
@@ -96,4 +103,5 @@ def extract_features(image: np.ndarray, params: Optional[RepresentationParams] =
         descriptors=des,
         aspect_ratio=float(w) / float(h),
         ink_density=float(np.mean(norm.ink > 0.25)),
+        stroke=extract_stroke_geometry(norm.ink, p.stroke, p.keypoint_canvas_width, p.keypoint_canvas_height),
     )

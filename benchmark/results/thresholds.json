@@ -2,49 +2,95 @@
  "multi": {
   "cv_heldout_counts": {
    "genuine": {
-    "accept": 42,
-    "n": 48,
-    "reject": 4
+    "accept": 222,
+    "n": 330,
+    "reject": 10
    },
    "random": {
     "accept": 0,
-    "n": 960,
-    "reject": 957
+    "n": 6480,
+    "reject": 6473
+   },
+   "skilled": {
+    "accept": 11,
+    "n": 1980,
+    "reject": 1742
+   }
+  },
+  "oof_counts": {
+   "genuine": {
+    "accept": 109,
+    "n": 330,
+    "reject": 16
+   },
+   "random": {
+    "accept": 0,
+    "n": 6480,
+    "reject": 6480
    },
    "skilled": {
     "accept": 0,
-    "n": 96,
-    "reject": 76
+    "n": 1980,
+    "reject": 1836
    }
   },
   "production": {
-   "accept": 4.65025100495529,
-   "hard_reject": 0.6254067463651707,
-   "reject": 1.4271491766726352
+   "accept": 8.759890803041404,
+   "hard_reject": -1.0847490903508614,
+   "reject": 2.5910804929814617
+  },
+  "rule": {
+   "accept_margin": 1.5,
+   "max_random_match": 0.001,
+   "max_skilled_match": 0.0025,
+   "reject_genuine_quantile": 0.05
   }
  },
  "single": {
   "cv_heldout_counts": {
    "genuine": {
-    "accept": 24,
-    "n": 73,
-    "reject": 3
+    "accept": 439,
+    "n": 825,
+    "reject": 37
    },
    "random": {
-    "accept": 2,
-    "n": 482,
-    "reject": 473
+    "accept": 0,
+    "n": 2931,
+    "reject": 2925
    },
    "skilled": {
-    "accept": 2,
-    "n": 98,
-    "reject": 46
+    "accept": 7,
+    "n": 1980,
+    "reject": 1479
+   }
+  },
+  "oof_counts": {
+   "genuine": {
+    "accept": 272,
+    "n": 825,
+    "reject": 41
+   },
+   "random": {
+    "accept": 0,
+    "n": 2931,
+    "reject": 2929
+   },
+   "skilled": {
+    "accept": 1,
+    "n": 1980,
+    "reject": 1554
    }
   },
   "production": {
-   "accept": 13.93803614613048,
-   "hard_reject": -3.833874012575848,
-   "reject": -0.27749666912537263
+   "accept": 6.368525657695674,
+   "hard_reject": -5.590888762259887,
+   "reject": -0.6513516128805179
+  },
+  "rule": {
+   "accept_margin": 1.0,
+   "max_random_match": 0.001,
+   "max_skilled_match": 0.0025,
+   "reject_genuine_quantile": 0.05
   }
  }
 }

@@ -32,6 +32,7 @@ from signature_verification_system.benchmark.protocol import (
     Pair,
     SampleImage,
     load_images,
+    cap_random_pairs,
     one_to_one_pairs,
     writer_dependent_trials,
     writer_folds,
@@ -185,12 +186,16 @@ def cross_validate(rows: List[Tuple[str, float]], fold_of: List[int], accept_mar
 # Main benchmark
 # ---------------------------------------------------------------------------
 
-def run(system: str, data_dir: Path, repeats: int, condition: str = "harmonized") -> Tuple[Dict[str, object], Dict[str, object]]:
+def run(
+    system: str, data_dir: Path, repeats: int, condition: str = "harmonized",
+    max_random: int = 0, max_random_per_query: int = 0,
+) -> Tuple[Dict[str, object], Dict[str, object]]:
     images = load_images(data_dir)
     by_id = {s.image_id: s for s in images}
     folds = writer_folds(images)
-    pairs: List[Pair] = one_to_one_pairs(images)
-    trials: List[EnrollmentTrial] = writer_dependent_trials(images)
+    pairs: List[Pair] = cap_random_pairs(one_to_one_pairs(images), max_random)
+    trials: List[EnrollmentTrial] = writer_dependent_trials(
+        images, max_random_per_query=max_random_per_query)
     pixels = _load(images, condition)
 
     needed = sorted({(p.ref_id, p.query_id) for p in pairs} | {(r, t.query_id) for t in trials for r in t.ref_ids})
@@ -308,9 +313,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--condition", choices=sorted(CONDITIONS), default="harmonized")
     ap.add_argument("--repeats", type=int, default=1, help="in-process determinism repeats")
+    ap.add_argument("--max-random", type=int, default=0, help="cap on random 1:1 pairs (0 = all)")
+    ap.add_argument("--max-random-per-query", type=int, default=0,
+                    help="cap on other-writer queries per held-out genuine in the 3-specimen protocol (0 = all)")
     args = ap.parse_args(argv)
 
-    results, runtime = run(args.system, Path(args.data_dir), args.repeats, args.condition)
+    results, runtime = run(args.system, Path(args.data_dir), args.repeats, args.condition,
+                           args.max_random, args.max_random_per_query)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(results, indent=1, sort_keys=True) + "\n")

@@ -745,3 +745,521 @@ differences below ~2 EER points are within noise.
 * Sample: genuine (3 refs) MATCH 82.1; skilled forgery NO MATCH 30.7; different
   person NO MATCH 7.2; genuine with 1 ref UNCERTAIN 53.8 (single-specimen policy);
   blurred INCONCLUSIVE (no score). Tests 112/112 (11 new).
+
+
+---
+
+## EXP-015 — Stroke-level signals + 55-writer evaluation (1:1 accuracy, no training of a model)
+
+* **Why:** the v3 verifier decided on two signals only (coarse layout cosine, SIFT inliers).
+  On full CEDAR (55 writers) the 12-writer numbers did not hold: 1:1 skilled EER **16.5%**
+  (not 11.1%), because fusion weights and thresholds had been fitted on 12 writers.
+  A human examiner also looks at stroke direction, slant, rhythm and pen width; those were
+  not used.
+* **Data:** `benchmark/build_cedar_eval.py` builds two disjoint slices of full CEDAR
+  (55 writers x 6 genuine + 6 skilled forgeries each): **dev** = images 1-6, **test** =
+  images 13-18 (never used for any choice below; scored once). Random pairs are strided
+  subsamples (`--max-random 6000`, `--max-random-per-query 40`); capped and uncapped runs
+  agree within 0.1 point on zone rates.
+* **Candidates measured** (single-signal AUC genuine-vs-skilled on dev, equalised scans):
+  layout 0.877, banded-DTW horizontal ink profile 0.877, slant histogram EMD 0.868,
+  keypoints 0.855, chamfer/ICP stroke distance 0.857, **local stroke-direction agreement
+  after ICP alignment x coverage 0.919**, vertical profile 0.785, stroke width 0.698,
+  topology counts 0.59-0.62 (junctions, endpoints, Euler number; dropped), finer gradient
+  grids 0.82 (dropped), piecewise 3-part ICP 0.881 (dropped: no gain in fusion).
+* **Fusion:** compact 6-signal set (keypoint, stroke_direction, slant, column_profile,
+  row_profile, stroke_width), balanced L2 logistic, C = 0.1, writer-disjoint 2-fold CV on
+  dev: skilled AUC 0.907 -> **0.945**, EER 15.5% -> **12.5%**; different-writer EER
+  5.7% -> 2.6%. Greedy forward selection picked different 6-8 signals per condition and
+  plateaued at AUC ~0.95, so a compact fixed set was chosen over the greedy optimum. The
+  `layout` signal is still computed and reported but not fused (it received a negative
+  weight; redundant with slant + direction).
+* **Speed:** ICP on every 4th skeleton point, 6 iterations, two starting transforms
+  (identity and the RANSAC keypoint transform; one start only: AUC 0.881 vs 0.916),
+  DTW profiles resampled to 128 / 64 samples (no accuracy loss). A pair costs ~10 ms
+  (was ~1 ms); a `compare_signatures` request costs ~370 ms vs ~340 ms (denoising dominates).
+* **Result on the untouched test slice** (weights/thresholds fitted on dev only):
+
+  | | old, equalised | **new, equalised** | old, raw | **new, raw** |
+  |---|---|---|---|---|
+  | 1:1 skilled EER | 16.5% | **9.3%** | 16.4% | **10.4%** |
+  | 1:1 skilled AUC | 0.901 | **0.952** | 0.897 | **0.949** |
+  | 1:1 different-writer EER | 5.6% | **3.8%** | 5.5% | **3.5%** |
+  | 3-specimen skilled EER | 9.4% | **6.1%** | 12.7% | **6.4%** |
+
+  Production thresholds (each system's own), ACCEPT / REVIEW / REJECT %, equalised scans:
+
+  | | old 1 spec. | **new 1 spec.** | old 3 spec. | **new 3 spec.** |
+  |---|---|---|---|---|
+  | genuine | 0.4 / 92.4 / 7.3 | **15.9** / 78.9 / 5.2 | 72.7 / 23.3 / 3.9 | 29.4 / 65.2 / 5.5 |
+  | skilled forgery | 0.0 / 50.6 / 49.4 | 0.0 / 26.2 / **73.8** | **1.5** / 40.2 / 58.3 | **0.0** / 7.7 / **92.3** |
+  | different writer | 0.0 / 2.9 / 97.1 | 0.0 / 1.1 / 98.9 | 0.2 / 1.7 / 98.2 | 0.0 / 0.2 / 99.8 |
+
+  Honest reading: with **one** specimen the new system is clearly better on every row.
+  With **three** specimens the old thresholds accepted more genuine signatures (73%), but
+  also 1.5% of skilled forgeries on unseen writers' images; the new thresholds follow the
+  rule "ACCEPT = highest dev impostor logit + 1" on 55 writers, which is stricter, so fewer
+  genuine are auto-accepted (29%) at 0% forgeries accepted and far more forgeries rejected.
+  The rule makes ACCEPT a function of the single worst impostor and so grows stricter with
+  more impostor pairs; a percentile-based rule is a business choice (see EXP-012).
+* **Determinism:** unchanged guarantees (benchmark `deterministic=True`, new hermetic
+  cross-process tests with synthetic signatures). New numerical steps: skeletonisation,
+  KD-tree nearest neighbours, a 2x2 SVD, banded DP.
+* **Review gate (code-reviewer + security-auditor):**
+  * code-reviewer found a real bug: `slant = 1 - EMD` was unbounded below (down to -8; 44%
+    of skilled and 77% of different-writer dev pairs were negative). The fit had learned a
+    weight on that wide range. Fixed by dividing by the maximum EMD (9) - an exact affine
+    map, compensated in the weights (1.877 -> 16.893, bias -24.969 -> -39.985); refitting
+    reproduced weight 16.897 / bias -39.988 and identical thresholds. Regression tests added.
+    Also: `PairSimilarity.signals` made required, named constants for magic numbers,
+    immutable name map, direct unit tests for the Umeyama fit, DTW and ICP primitives.
+  * security-auditor: PASS (low risk). Hardened: deterministic cap of 20,000 skeleton points
+    (noise images skeletonised to up to 86k points; worst case then 10 specimens + noise was
+    12.7 s per request), scipy upper bound, `FusionModel` validates its signal keys.
+    Not done (production work, unchanged): per-request concurrency limit and rate limiting.
+* **Not verified:** the data-dependent test files (`test_pipeline.py`, `test_api_and_cli.py`,
+  `test_multi_reference.py`, `test_signature_compare.py`) are skipped without the repo's
+  sample images, which cannot be reconstructed from the CEDAR download (they were resized).
+  Their asserted outcomes (e.g. "genuine auto-clears") were tied to the old thresholds and
+  must be re-checked when the samples are available. 12-writer figures elsewhere in this
+  report are historical.
+* Tests: 65 passed, 3 skipped (adds 28 hermetic tests in `tests/test_stroke_geometry.py`).
+
+## EXP-016 — Isolate signature ink from printed rules and text (capture robustness)
+
+* **Problem:** `normalize_signature` cropped to all ink, so a printed caption and form rule
+  (`distractor_print`) set the crop (99% of val genuine pairs NO MATCH) and faint ruled
+  lines stayed as 0.12-darkness stripes inside the ink map (`ruled_lines`).
+* **Change:** `src/preprocessing/isolation.py`, applied to the darkness map before the crop.
+  (1) 1-px-tall grayscale opening, length 0.5 x width (odd, zero-padded border): a run is
+  removed if it is fainter than ink and <= 50% of it lies within 2 rows of ink, or if it is
+  ink-dark and >= 60% of the ink components it touches. (2) Printed-text groups (dilation
+  radius 2% of the diagonal): >= 6 glyphs, group height <= 1.5 x median glyph height, width
+  >= 6 x height. Never removes all ink.
+* **Rejected variants (dev, 660 images):** distance/mass clustering ("keep the main blob")
+  cannot work: clean CEDAR has detached parts up to 4.3x the main part's height away with
+  equal mass, while the caption sits 1.1-1.5x away. Unfiltered rule opening changed 19 clean
+  images (straight underline flourishes); with the OpenCV default border, strokes touching
+  the edge passed at half length. Purity + ink-contact filters bring this to 1/660 (a
+  scanner border line on a forgery scan).
+* **Triggers (dev):** rules removed 1/660 clean, 660/660 ruled_lines, 660/660 distractor;
+  text dropped 0/660 clean, 660/660 distractor.
+* **Dev clearance:** 5.03 -> 5.18 (R 0.430 -> 0.479); clean skilled EER 11.76% unchanged;
+  distractor_print EER 26.8% -> 11.9% (genuine NOMATCH 98.7% -> 4.6%); ruled_lines
+  12.1% -> 11.8% (genuine NOMATCH 7.3% -> 5.0%). Other conditions unchanged. No refit.
+* **Val clearance (reported once):** 3.88 -> 3.99 (D 0.502, R 0.313, O 0.348); clean
+  skilled EER 15.42%; distractor_print 31.4% -> 15.6% (genuine NOMATCH 99% -> 8.1%);
+  ruled_lines 17.0% -> 15.9% (genuine NOMATCH 11.3% -> 7.8%).
+* **Cost:** ~175 ms mean per extract on dev (proxy, 6 workers), within the prior budget.
+* **Limits:** only perfectly horizontal rules; an ink-dark rule fused with the signature
+  (signing across the line) is kept; vertical rules and stamps are not handled.
+
+## EXP-017 — Stroke-quality signals: ink pressure pattern and contour curvature
+
+* **Failure analysis (dev, harmonized, production fusion):** the hardest skilled forgeries
+  (highest logits) are not fooled by one signal; they sit at the 25-50th genuine
+  percentile on *every* shape signal (mean percentile over skilled pairs above the EER
+  threshold: keypoint 0.28, direction 0.25, slant 0.33, column 0.23, row 0.32, width 0.48).
+  Writers 23, 21, 24, 46, 01 hold most of them. Side-by-sides show the forger copied the
+  outline well; what differs is stroke quality: the genuine strokes taper, thin and darken
+  in writer-specific places, forgeries have uniform, blunt, rounder strokes. The hardest
+  genuine pairs (writers 08, 45, 41, 14) are real intra-writer variation (an extra
+  flourish, a shortened name); no signal fixes those.
+* **Also found:** `fit_fusion.py`, `select_thresholds.py` and `fit_evidence_reference.py`
+  read raw scans while the clearance score harmonizes. They now take `--condition`
+  (default `harmonized`). Harmonized refit of the 6 old signals alone: CV skilled EER 12.37%.
+* **Candidates** (dev single-signal AUC genuine-vs-skilled; fused = writer-disjoint 2-fold
+  CV skilled EER when added to the 6 signals, base 12.37%, 3000 random pairs):
+
+  | signal | AUC | fused EER | note |
+  |---|---|---|---|
+  | width-histogram EMD / width CV / thin fraction | 0.73 / 0.65 / 0.65 | 12.37 / 12.23 / 12.59 | no gain |
+  | darkness-histogram EMD | 0.81 | 10.91 | **rejected: session shortcut** (same- vs cross-session AUC 0.609) |
+  | darkness std ratio | 0.73 | 11.63 | session AUC 0.545, superseded |
+  | contour curvature histogram EMD | 0.75 | 12.01 | session AUC 0.476; kept (joint gain) |
+  | contour roughness / mean curvature | 0.67 / 0.61 | 12.23 / 12.34 | no gain |
+  | aligned HOG 4x8 / aligned blurred-ink correlation | 0.87 / 0.88 | 12.97 / 12.62 | redundant with direction (negative weight) |
+  | worst-2-cell direction / tight direction / ICP residual | 0.81 / 0.91 / 0.85 | 12.62 / 12.48 / 12.23 | redundant |
+  | **pressure pattern** (rank corr. of darkness at ICP-matched points x coverage) | **0.907** | **11.40** | session AUC 0.508 |
+  | width rank pattern | 0.885 | 11.98 | weaker twin of pressure |
+  | **pressure + curvature** | | **10.55** | both folds improve (11.20/10.88 -> 9.74/9.37) |
+
+  Session test: different-writer pairs only, genuine(w1)-genuine(w2) vs genuine(w1)-forgery(w2);
+  the existing stroke_width and slant score 0.456 / 0.463 on it. Re-run on the shipped
+  code (curvature on the 512x256 canvas, not the 1024x512 prototype): curvature 0.477,
+  pressure_pattern 0.508.
+* **Shipped:** `pressure_pattern` and `curvature` in `stroke_geometry.py` (one shared ICP
+  alignment and correspondence for direction and pressure). Refit on harmonized dev
+  (`--max-random 6000`): CV skilled AUC 0.958, EER **10.58%**, random EER 2.18%; all weights
+  positive. Thresholds (`--max-random-per-query 40`): single accept 6.3645 / reject -0.0803;
+  CV single-specimen genuine auto-accept 39.3% at 0 skilled accepted.
+* **Dev clearance** (in-sample for weights/thresholds): 5.18 -> **5.94** (D 0.681, R 0.533,
+  O 0.539); clean skilled EER 11.76% -> 10.08%, random 1.70%.
+* **Val clearance (reported once):** 3.99 -> **4.98** (D 0.599, R 0.409, O 0.454, gate off).
+  Clean skilled EER 15.42% -> **12.48%** (AUC 0.940), random 2.67%. Operating point:
+  genuine MATCH 28.2 / REVIEW 63.8 / NOMATCH 8.0%; skilled MATCH 0.1 / NOMATCH 78.5%; random
+  NOMATCH 99.9%. Condition EERs: tinted 12.7, shadow 13.7, ruled 12.6, large canvas 12.4,
+  distractor 13.0, faint 13.6, scale 0.5 20.0, scale 2.0 17.7, rotate +20 15.4,
+  rotate -15 17.8, phone 13.8.
+* **Limits:** curvature is resolution-fragile: on dev, scale 0.5 / 2.0 EERs got worse with
+  it (14.9 -> 15.7, 13.4 -> 14.2 vs the harmonized 6-signal refit) while all other
+  conditions improved; pressure alone improved all 11. Val genuine NOMATCH is 8.0% (> the
+  5% design target), and 20-27% under scale / rotation. Scale-robust curvature is the
+  next step.
+* **Cost:** serial, same 24 images: extraction 181 -> 179 ms, compare 7.7 -> 7.7 ms per pair
+  (no measurable change; the extra work is ~1 ms each).
+
+## EXP-018 — Thresholds from out-of-fold logits (decision D-005)
+
+* **Problem:** the fusion is fitted on the dev pairs, so dev logits from the production
+  fusion are in-sample and over-separated. REJECT at their 5th genuine percentile became
+  8.0% genuine NOMATCH on val; ACCEPT (max impostor + 1.0) hung on one extreme value.
+* **Method (dev only):** `select_thresholds.py` refits the fusion (`fit_fusion._fit`, same
+  pair set `--max-random 6000`; full-dev refit reproduces the config weights exactly) on one
+  writer fold and scores the other -> out-of-fold (OOF) logits for every within-fold pair
+  (cross-fold random pairs dropped). Multi-specimen trials: the same fold fits on
+  max-aggregated signals. Rule estimate = **nested**: rule selected on inner OOF logits of the
+  training fold (split again by writer), counted on the test fold scored by the fold fit.
+  Fusion and cut-offs never see the test writers.
+* **Finding:** pooled-OOF rates are tautological (the rule hits its own quantile). Nested
+  skilled MATCH runs above the target because a fit on more writers has a larger weight norm
+  (full 43.6, folds 34.3 / 42.9, inner 26-44): thresholds read from a smaller fit are lenient
+  for the bigger one. The margin absorbs this gap and is sized on the nested check.
+* **Single-specimen candidates** (dev, n = 825 genuine / 1980 skilled / 2931 random;
+  nested held-out; reject = q5 genuine OOF in all rows; random MATCH 0 in all rows):
+
+  | accept rule | accept | gen MATCH | gen NOMATCH | skl MATCH | skl NOMATCH | O-like |
+  |---|---|---|---|---|---|---|
+  | max impostor + 1.0 (old rule, OOF) | 6.473 | 49.3% | 3.9% | 0.15% | 68.3% | 0.549 |
+  | q99.5 skilled + 0 | 4.038 | 71.4% | 3.9% | 1.26% | 68.3% | 0.660 |
+  | q99.5 skilled + 0.5 | 4.538 | 64.4% | 3.9% | 0.91% | 68.3% | 0.624 |
+  | q99.75 skilled + 0.5 | 5.012 | 62.6% | 3.9% | 0.61% | 68.3% | 0.615 |
+  | q99.9 skilled + 0.75 | 5.850 | 54.8% | 3.9% | 0.30% | 68.3% | 0.577 |
+  | **q99.75 skilled + 1.0** | **5.512** | **54.9%** | **3.9%** | **0.30%** | **68.3%** | **0.577** |
+  | q99.5 skilled + 1.25 | 5.288 | 54.8% | 3.9% | 0.30% | 68.3% | 0.577 |
+
+  The random term (q99.9) never binds. Reject q4 instead of q5: nested genuine NOMATCH
+  3.2%, O-like 0.620 vs 0.645 (at q99.75 + 0), so q5 kept. Per outer fold the chosen rule
+  gives skilled MATCH 1/1008 and 5/972, genuine NOMATCH 22/420 (5.2%) and 10/405.
+* **Multi-specimen** (n = 330 / 1980 / 6480): even the old max-impostor + 1.0 rule gives
+  nested skilled MATCH 0.81% on OOF logits (signal-wise max amplifies the scale gap); the
+  same quantiles need margin 1.5: q99.75 skilled + 1.5 -> genuine MATCH 64.8%, NOMATCH 3.9%,
+  skilled MATCH 0.35%, random 0%.
+* **Shipped rule:** accept = max(q99.75 skilled OOF, q99.9 random OOF) + margin (single 1.0,
+  multi 1.5); reject = q5 genuine OOF; hard_reject = min genuine OOF. Thresholds old -> new:
+  single accept 6.3645 -> **5.5123**, reject -0.0803 -> **-0.6729**, hard -4.1280 -> -5.5863;
+  multi accept 8.5690 -> **8.3837**, reject 3.0381 -> **2.2261**, hard 0.5526 -> 0.0533.
+  `evidence_reference.json` band reliability now holds the nested counts (signal quantiles
+  unchanged). Fusion weights and features unchanged.
+* **Val clearance (reported once):** 4.98 -> **5.06** (D 0.599, R 0.409, O 0.454 -> **0.479**,
+  gate off). Operating point: genuine MATCH 28.2 -> 36.8 / REVIEW 58.1 / NOMATCH 8.0 -> 5.1%;
+  skilled MATCH 0.1 -> 0.3 / NOMATCH 78.5 -> 69.1%; random MATCH 0.0 / NOMATCH 99.4%. No
+  condition exceeds 0.5% skilled MATCH (max faint_ink 0.4%). Genuine NOMATCH remains
+  15.9-20.6% under scale / rotation.
+* **Limits:** dev has only ~10 skilled pairs per 0.5%, so the skilled tail is coarse;
+  hard_reject still rests on one extreme genuine (not scored); val genuine NOMATCH 5.1%
+  sits just above the 5% target.
+
+## EXP-019 — Symmetric stroke alignment; cohort score normalisation rejected
+
+* **Question:** `compare(a, b)` aligns specimen -> query (keypoint RANSAC seed + ICP). Does a
+  symmetric comparison help, and does cohort normalisation against a fixed set of dev
+  genuines (no training) remove "generic signature scores high against everyone"?
+* **Method (dev only):** `compare(i, j)` signals for all 660 x 659 ordered harmonized dev
+  image pairs, cached once; every variant refits the fusion (`fit_fusion._fit`, same
+  `--max-random 6000` pair set) on one writer fold and scores the other. Baseline
+  reproduces fit_fusion: CV skilled EER **10.58%**, random 2.18%.
+* **Symmetric variants** (signals of compare(a, b) and compare(b, a), refit):
+
+  | variant | skilled EER | AUC | random EER |
+  |---|---|---|---|
+  | forward (production) | 10.58 | 0.9582 | 2.18 |
+  | backward only | 10.41 | 0.9533 | 2.42 |
+  | mean, all signals | 10.06 | 0.9596 | 2.07 |
+  | min, all signals | 11.27 | 0.9549 | 2.31 |
+  | concat (16 signals) | 10.19 | 0.9587 | 2.04 |
+  | max, all signals | 9.70 | 0.9611 | 1.80 |
+  | **max, stroke_direction + pressure_pattern only** | **9.59** | **0.9618** | **1.70** |
+  | mean, stroke_direction + pressure_pattern | 9.81 | 0.9607 | 2.05 |
+
+  Max on one signal at a time: pressure 9.34, direction 10.30, keypoint 10.91; slant,
+  profiles, width, curvature are already symmetric (identical numbers). The two ICP-read
+  signals are the asymmetric ones: the better of two alignments is a better alignment.
+  Per fold (forward -> shipped): 10.23 -> 8.38, 9.65 -> 9.15.
+* **Cohort normalisation** (honest: cohort = K genuines of the *other* fold's writers,
+  round-robin by writer; logits from the fold's own fusion). Skilled EER %:
+
+  | base / norm | K=20 | K=50 | K=100 |
+  |---|---|---|---|
+  | forward, Z-norm by reference | 12.95 | 12.37 | 12.62 |
+  | forward, Z-norm by query | 12.37 | 12.23 | 12.48 |
+  | forward, S-norm (Z, both sides) | 12.12 | 12.12 | 12.01 |
+  | forward, minus reference cohort mean | 11.16 | 11.27 | 11.40 |
+  | forward, minus mean of both cohort means | 9.81 | 10.06 | 10.06 |
+  | forward, minus query cohort mean | 9.56 | 9.59 | 9.59 |
+  | max-all, minus query cohort mean | 8.98 | 9.12 | 9.34 |
+  | max-all, minus both means | 9.20 | 9.31 | 9.34 |
+  | **shipped**, minus query cohort mean | 8.84 | 9.20 | 8.98 |
+
+  Dividing by the cohort sigma always hurts: +1.4 to +2.4 pt vs the forward baseline
+  (10.58), up to +3.4 pt on the symmetric-mean base. Mean offsets help the forward score
+  but add only 0.4-0.75 pt on top of the symmetric signals, not monotone in K.
+  Caveat variants, shipped minus query cohort mean (base 9.59): cohort from *all* other
+  dev writers incl. test-fold ones 10.28 (K=20) / 8.95 (K=50); "val-like" (same writers
+  allowed, only the pair's own images excluded; with K <= 55 only the first K sorted
+  writers contribute) 10.06 / 8.84. Forward / max-all minus both means: all-other-writers
+  10.80 / 10.17 (K=20), 10.17 / 9.70 (K=50); val-like 10.69 / 9.81, 10.08 / 9.34.
+  K=20 query-mean nominally clears the bar honestly (-0.75 pt) but turns into a loss
+  (+0.5-0.7 pt) when only the cohort composition changes; K=50-100 give -0.4 to -0.75 pt.
+  Cost (derived, not timed end to end): K extra compares per request at ~10 ms each
+  (K=50: ~500 ms, more than doubling a ~375 ms request), a shipped cohort, and a
+  normalised score that is no longer the fused log-odds the thresholds, multi-specimen
+  max and inspect breakdown assume. **Rejected for now:** gain is cohort-dependent and
+  borderline against the 0.5 pt bar; K >= 50 query-mean is the candidate if latency allows.
+* **Shipped:** `similarity.compare` computes stroke signals a second time with the roles
+  swapped (own b -> a keypoint seed) and keeps max(forward, reverse) for stroke_direction
+  and pressure_pattern. All consumers (1:1, multi-specimen max, fitting scripts,
+  clearance score, inspect) read `pair.signals`, so the fused log-odds is still
+  bias + sum(weight x signal); inspect's breakdown is unchanged and still sums exactly.
+  Refit (dev): CV skilled AUC 0.9618, EER **9.59%**, random 1.70%; all weights positive.
+  Thresholds (EXP-018 rule): single accept 5.5123 -> 6.3685, reject -0.6729 -> -0.6514,
+  hard -5.5863 -> -5.5909; multi accept 8.3837 -> 8.7599, reject 2.2261 -> 2.5911, hard
+  0.0533 -> -1.0847. Nested held-out single: genuine accept 53.2% / reject 4.5%, skilled
+  accept 0.35%, random accept 0%; multi: genuine 67.3% / 3.0%, skilled accept 0.56%.
+* **Dev clearance (in-sample):** 6.29 (D 0.725, R 0.580, O 0.549); clean skilled EER 8.73%.
+* **Val clearance (reported once):** 5.06 -> **5.24** (D 0.599 -> 0.622, R 0.409 -> 0.456,
+  O 0.479 -> 0.461, gate off). Clean skilled EER 12.48% -> **11.76%** (AUC 0.946), random
+  2.67% -> 2.54%. Operating point: genuine MATCH 28.8 / REVIEW 66.1 / NOMATCH 5.1%; skilled
+  MATCH 0.2 / NOMATCH 73.5%; random MATCH 0.0 / NOMATCH 99.7%. Condition EERs: tinted 11.4,
+  shadow 12.0, ruled 12.5, large canvas 11.6, distractor 11.7, faint 11.7, scale 0.5 18.4,
+  scale 2.0 17.2, rotate +20 14.3, rotate -15 16.3, phone 12.6. Max skilled MATCH over
+  conditions 0.2%.
+* **Cost:** compare 5.4 -> 10.2 ms per pair (serial, 200 dev pairs); `compare_signatures`
+  mean 372 -> 375 ms, median 372 -> 382 ms per request (40 dev pairs, serial, interleaved;
+  extraction dominates).
+* **Limits:** the higher accept threshold (larger weight norm) lowered val genuine MATCH
+  36.8% -> 28.8%, so O fell slightly; multi-specimen nested skilled accept rose 0.35% ->
+  0.56% (rule unchanged, not re-tuned). Genuine NOMATCH under scale / rotation is still
+  12.8-18.3%.
+
+## EXP-020 — Elastic deformation evidence (rejected; production unchanged)
+
+* **Hypothesis:** a genuine signature differs from its reference by a small, smooth
+  deformation; a skilled forgery matches the global shape but needs larger, less coherent
+  local deformations. Measured on top of the shipped 8 signals (EXP-019 base: CV skilled
+  EER **9.59%**, AUC 0.9618, random 1.70%; folds 8.38 / 9.15).
+* **Method (dev only):** harmonized dev features cached once; for the `fit_fusion` pair set
+  (`--max-random 6000`; 825 genuine / 1980 skilled / 6000 random) each candidate is computed
+  after the existing global alignment (keypoint seed + ICP), in both directions (forward,
+  mean, min, max). Single AUC = genuine vs skilled; fused = writer-disjoint 2-fold CV
+  skilled EER with the candidate added to the 8 (`fit_fusion._fit`); weights reported per
+  fold after orienting the signal so that higher = more genuine.
+* **Candidate families** (best entries; ~120 variants in all):
+
+  | family | candidate | single AUC | fused EER | fold weights |
+  |---|---|---|---|---|
+  | smooth field | Gaussian displacement field (CPD-like, 5 iterations, σ 15/30/60 px, ≤ 400 control points): residual after the elastic fit, σ 30, mean | 0.899 | 9.67 | -6.90 / 2.60 |
+  | | incoherence of raw nearest-stroke displacements vs the smooth field, σ 30, max | 0.884 | 9.45 | -0.11 / 0.21 |
+  | | field gradient (roughness), σ 30, max | 0.821 | 9.23 | -0.44 / -0.26 (suppressor) |
+  | | displacement magnitude / 90th pct / fraction > 8 px / elastic gain | 0.52-0.83 | 9.36-9.59 | mixed or ~0 |
+  | contour DTW | upper+lower envelope (64 bins, band 10%), DTW cost, min | 0.848 | 9.94 | -0.09 / 0.06 |
+  | proportions | stroke-component centroid distance / component-count agreement | 0.717 / 0.621 | 9.70 / 9.94 | ~0 / mixed |
+
+  No candidate gives > 0.5 pt with positive weights in both folds. Like the ICP residual
+  (EXP-017), the field measures are strong alone but redundant with direction x coverage
+  and pressure x coverage.
+* **Elastic re-correspondence** (the one variant that changes information): warp every
+  aligned skeleton point by the smooth field (Gaussian interpolation of the control-point
+  field), redo the nearest-stroke correspondence, re-read stroke direction / pressure
+  pattern (global rotation kept for orientations), max over both directions.
+  Single AUC: elastic pressure 0.926 / 0.930 / 0.930 / 0.927 / 0.925 (σ 15/30/60/90/120)
+  vs 0.921 rigid; elastic direction 0.924-0.935 vs 0.937 rigid. Fused (σ 15/30/60/90/120):
+
+  | variant | skilled EER | note |
+  |---|---|---|
+  | replace direction | 9.45 / 9.34 / 9.47 / - / - | worse per fold |
+  | replace pressure | 9.45 / 9.12 / 9.20 / 9.34 / 9.36 | |
+  | replace both | 10.06 / 9.67 / 9.81 / - / - | |
+  | add direction | 9.56 / 9.59 / 9.59 / - / - | |
+  | **add pressure** | 9.34 / 9.09 / **8.98** / 9.34 / 9.45 | σ 60: folds 8.33 / 8.69, AUC 0.9626, random 1.81 |
+  | add both | 9.23 / 9.09 / 9.12 / - / - | elastic direction weight negative in fold 0 |
+
+  Checks on the best (add pressure): weight moves from rigid to elastic pressure (σ 60
+  fold weights rigid 0.86 / 3.34, elastic 7.58 / 8.29). Writer bootstrap (200 resamples of
+  the OOF logits) of the EER gain: σ 60 mean 0.24 pt, 90% interval -0.25..0.83,
+  P(gain > 0) 0.76; σ 30 mean 0.34 pt, -0.42..1.03. **Nested σ selection** (inner writer
+  2-fold inside each training fold, σ in {15, 30, 60, 90, 120}): folds pick σ 15 and 30,
+  pooled held-out skilled EER **9.31%** (gain 0.28 pt < 0.5 bar). Session-shortcut AUC
+  (different-writer genuine-genuine vs genuine-forgery, 2922 / 2915 pairs): elastic
+  pressure 0.502 / 0.505 (σ 30 / 60), rigid 0.510 - no shortcut.
+* **Cost:** elastic re-correspondence with its own keypoint + ICP alignment, both
+  directions, ~23 ms per pair (lab, single BLAS thread, 40 dev pairs) on top of ~10 ms.
+  With default BLAS threads under a 6-worker load the 400 x 400 kernel products took
+  ~500 ms per call (thread oversubscription), so any shipped version would need non-BLAS
+  products.
+* **Decision: rejected.** The 8.98% is the best of ~25 configurations chosen on the scoring
+  writers; selected honestly it is a 0.28 pt gain, AUC moves only +0.0008, and it would
+  cost ~2-3x the pair time. Production code, fusion, thresholds and evidence reference are
+  unchanged (val 5.24 stands; not re-scored). If revisited: reuse the shipped alignment
+  instead of recomputing it, and fix σ beforehand.
+
+## EXP-021 — Local stroke properties at ICP-matched points (rejected; production unchanged)
+
+* **Hypothesis:** `pressure_pattern` (EXP-017/019) works because forgers copy shape, not
+  where the pen presses. Other local properties read at the *same* matched stroke points
+  might carry the same kind of writer-specific evidence.
+* **Method (dev only):** harmonized dev features cached once; correspondences rebuilt
+  exactly as production (`align_strokes` + `_correspond`, keypoint seed via `_trusted_seed`,
+  both directions). Check: recomputed max(fwd, rev) pressure equals the shipped signal
+  (max abs diff 0.0); baseline reproduces CV skilled EER **9.59%**, AUC 0.9618, random
+  1.70%, folds 8.38 / 9.15. Per-skeleton-point attributes (hyper-parameters fixed before
+  any fused run): width = 2 x distance transform, along-stroke mean r 4; curvature = mean
+  |delta orientation| / distance over neighbours r 8; linearity = PCA lambda2 / (lambda1 +
+  lambda2), r 8; darkness gradient = |slope of along-stroke darkness along the local
+  tangent|, r 6; coarse pressure = blur sigma 2, along-stroke r 12; joint = rank(darkness)
+  + rank(width). Signal = Spearman correlation at matched points, raw or x coverage, max
+  over both directions. Fused = signal added to the shipped 8, `fit_fusion._fit`,
+  writer-disjoint 2-fold CV (825 genuine / 1980 skilled / 6000 random).
+  Session test: 2970 different-writer genuine-genuine vs 2970 genuine-forgery pairs.
+
+  | candidate | form | single AUC | session AUC | fused EER | folds | fold weights |
+  |---|---|---|---|---|---|---|
+  | width | raw / cov | 0.859 / 0.906 | 0.486 / 0.491 | 9.45 / 9.59 | 8.55/9.60, 8.77/9.37 | -2.06/1.52, -2.94/2.77 |
+  | curvature | raw / cov | 0.813 / 0.873 | 0.470 / 0.472 | 9.36 / 9.34 | 8.55/9.15, 8.55/9.15 | 0.67/-0.72, 0.84/-2.27 |
+  | linearity | raw / cov | 0.794 / 0.862 | 0.478 / 0.480 | 9.56 / 9.47 | 8.33/9.15, 8.33/8.87 | 0.33/0.09, 0.39/-0.83 |
+  | darkness gradient | raw / cov | 0.828 / 0.888 | 0.490 / 0.490 | 9.34 / 9.45 | 8.55/9.09, 8.60/9.20 | 1.27/2.50, 2.80/3.90 |
+  | coarse pressure | raw / cov | 0.877 / 0.916 | 0.492 / 0.498 | 9.45 / 9.47 | 8.33/8.64, 8.55/9.15 | 0.74/2.61, 1.32/5.37 |
+  | joint width+pressure | raw / cov | 0.874 / 0.916 | 0.494 / 0.498 | 9.56 / 9.59 | 8.82/9.37, 8.60/9.37 | -2.21/1.78, -3.21/4.11 |
+  | all six added | cov / raw | | | 9.34 / 9.56 | 8.87/9.15, 9.04/9.15 | mixed signs |
+  | joint replaces pressure | cov | | | 10.06 | 9.57/10.10 | |
+
+  (Shipped pressure for reference: single AUC 0.921 cov, session 0.502.) 15
+  configurations in all: the 12 single additions were fixed beforehand; the last three
+  rows were added after seeing them. No shortcut (session AUC 0.47-0.50), but no candidate reaches the
+  0.5 pt bar; the best gain is 0.25 pt. Width (a re-test of EXP-017's "width rank
+  pattern", now symmetric) and the joint pattern get opposite-sign weights across folds:
+  redundant with pressure x coverage. Writer bootstrap (200 resamples) of the gain: curvature
+  cov mean 0.13 pt, 90% -0.31..0.63; darkness gradient raw 0.07, -0.63..0.61; cov 0.00,
+  -0.68..0.61.
+* **Cost (not shipped):** attributes ~30 ms per image serial (Python per-point loops);
+  the correlation reads reuse the shipped correspondence.
+* **Decision: rejected.** Like EXP-017/020, local measures at matched points are strong
+  alone (AUC 0.86-0.92) but carry no information beyond direction x coverage and
+  pressure x coverage. Production code, fusion, thresholds and evidence reference are
+  unchanged (val 5.24 stands; not re-scored).
+
+## EXP-022 — Preprocessing / stroke-extraction constants re-tuned for the stroke signals (rejected)
+
+* **Question:** the preprocessing constants (EXP-002/006) were chosen on 12 writers for the
+  old SIFT + gradient-grid signals. NLM denoising and ink smoothing could erode the
+  grayscale texture that `pressure_pattern` reads. Are they still right for the current 8
+  signals?
+* **Method (dev only):** grid declared before any non-base run: one factor at a time around
+  the shipped point, then one small joint grid of the 2 most promising factors. Each
+  setting re-extracts the 660 harmonized dev images (6 workers), recomputes `compare` on the
+  `fit_fusion` pair set (`--max-random 6000`) and refits with `fit_fusion._fit`; metric =
+  writer-disjoint 2-fold CV skilled EER. Base reproduces fit_fusion exactly (9.59%).
+  Bar: gain > 0.5 pt and writer-bootstrap (200 paired resamples of writers, OOF logits)
+  90% lower bound > 0, then dev capture conditions. Every run asserted its signal matrix
+  differs from base. INK_SMOOTH_SIGMA "0" was run as 0.3 (cv2 rejects sigma 0; a 3-tap
+  kernel with ~0.4% side weight). The 768x384 canvas is the shared keypoint/skeleton canvas;
+  variant (s) also scales the canvas-px parameters x1.5.
+* **Results** (17 configurations: 1 base + 14 OFAT + 2 joint; skilled EER %, AUC, random
+  EER %, per-fold EER at each fold's own threshold):
+
+  | setting | skilled EER | AUC | random EER | folds |
+  |---|---|---|---|---|
+  | base (h 12, σ 0.8, 2 passes, mask 0.25, 512x256, ICP 6 it, stride 4) | 9.59 | 0.9618 | 1.70 | 8.38 / 9.15 |
+  | DENOISE_STRENGTH 0 / 6 / 9 / 15 | 9.59 / 9.81 / 9.45 / 9.67 | 0.9632 / 0.9602 / 0.9623 / 0.9633 | 1.70 / 2.18 / 1.81 / 1.72 | |
+  | INK_SMOOTH_SIGMA 0 (0.3) / 0.5 / 1.2 | 9.94 / 9.94 / 9.94 | 0.9597 / 0.9592 / 0.9608 | 1.94 / 2.07 / 1.80 | |
+  | NORMALIZATION_PASSES 1 | 9.59 | 0.9621 | 1.94 | 9.04 / 8.87 |
+  | INK_MASK_LEVEL 0.2 / 0.3 | 9.70 / 9.72 | 0.9599 / 0.9641 | 1.94 / 1.57 | |
+  | canvas 768x384 / 768x384 (s) | 9.94 / 9.83 | 0.9597 / 0.9619 | 1.93 / 1.70 | |
+  | icp_point_stride 2 | 9.56 | 0.9633 | 1.57 | 8.82 / 8.87 |
+  | **icp_iterations 10** | **8.98** | 0.9631 | 1.70 | 8.55 / 8.87 |
+  | joint: ICP 10 + h 9 / ICP 10 + h 0 | 9.45 / 9.59 | 0.9613 / 0.9629 | 1.94 / 1.81 | |
+
+* **Bootstrap:** ICP 10 iterations gain 0.61 pt, bootstrap mean 0.40, 90% interval
+  **-0.36..0.96**, P(gain > 0) 0.82 -> fails the lower-bound bar. h 9: gain 0.14, interval
+  -1.08..0.72. ICP 10 is also the best of 17 settings picked on the scoring writers, and it
+  does not combine with the second-best factor (joint 9.45 / 9.59).
+* **Finding:** none of the photometric constants matters at this resolution: every
+  denoise / smoothing / passes / mask / canvas setting lies within -0.14..+0.35 pt of base,
+  well inside the bootstrap spread (90% intervals 1.3-1.8 pt wide). Turning NLM off does not help
+  `pressure_pattern` on clean dev (9.59, unchanged pooled; AUC +0.0014), so there is no
+  measured case for trading away the EXP-006 noise robustness. Likely reason: the frozen
+  benchmark `harmonize` already applies σ 0.8 smoothing and a 0.06 noise floor before the
+  pipeline sees the image.
+* **Decision: rejected; nothing changed.** No candidate passed, so no dev clearance
+  comparison, refit or val scoring was run (val 5.24 stands). If revisited, ICP iterations
+  is the only lead: test it with more dev data or fixed in advance, not chosen from this grid.
+* **Cost:** extraction of 660 dev images with 6 workers ~25 s per setting (10 s with NLM
+  off); compare of 8805 pairs ~24 s (35 s on the 768x384 canvas).
+
+## EXP-023 — Frozen pretrained SigNet embedding as a 9th signal (rejected; production unchanged)
+
+* **Question (decision D-007):** does a published, frozen offline-signature CNN, used as-is
+  (no training or fine-tuning), add evidence beyond the 8 hand-crafted signals? Signal =
+  cosine of the two L2-normalised 2048-d embeddings (symmetric by construction).
+* **Model:** SigNet and SigNet-F (lambda 0.95), Hafemann, Sabourin & Oliveira, Pattern
+  Recognition 2017 (arXiv 1705.05787); PyTorch weights from `luizgh/sigver` (README Google
+  Drive links; `signet.pth` sha256 `9f23129c...4fb931`, `signet_f.pth` `6605cb2d...7929fc`,
+  63.2 MB each). Trained on **GPDS** users 300-881 only (not CEDAR). Licences: code BSD-3-Clause
+  (`sigver`; `sigver_wiwd` BSD-2-Clause); the weights carry no licence of their own and the
+  author states GPDS is **restricted to non-commercial use**. Loaded with
+  `torch.load(weights_only=True)` in a throwaway `.lab/` venv only, exported to ONNX (opset
+  17); ONNX vs PyTorch max abs diff 1.4e-5. Against the author's reference features the
+  re-run gives cosine 0.9995 (max abs diff 0.11), attributed to scikit-image preprocessing
+  drift (0.26 vs the original), not to the weights.
+* **Runtime (onnxruntime 1.30 CPU, 1 intra/inter-op thread):** ~2.2 ms per image (150x220);
+  100 runs on one input bit-identical.
+* **Method (dev only):** harmonized dev, `fit_fusion` pair set (`--max-random 6000`; 825
+  genuine / 1980 skilled / 6000 random); base reproduces CV skilled EER **9.59%**, AUC
+  0.9618, random 1.70%, folds 8.38 / 9.15. Grid declared before any run (10 configs):
+  model {SigNet, SigNet-F} x input {isolated ink crop (`NormalizedSignature.ink`, bg 0)
+  letter-boxed to 50 / 65 / 80 / 95% of the 170x242 canvas then centre-cropped 150x220;
+  the author's own `preprocess_signature` on the harmonised gray with the GPDS canvas
+  952x1360}. Selection rule (fixed beforehand): highest single-signal skilled AUC.
+  Fused = cosine added to the 8, `fit_fusion._fit`, writer-disjoint 2-fold CV. Session
+  test: different-writer genuine-genuine vs genuine-forgery pairs, all of them.
+
+  | model | input | AUC skl | EER skl | AUC rnd | EER rnd | session | fused skl EER | folds | fold weights |
+  |---|---|---|---|---|---|---|---|---|---|
+  | SigNet | ink 50% | 0.890 | 18.3 | 0.991 | 3.5 | 0.475 | 9.36 | 8.60/9.60 | 1.31/3.09 |
+  | SigNet | ink 65% | 0.899 | 17.1 | 0.993 | 2.8 | 0.464 | 9.45 | 8.77/9.20 | 1.07/3.42 |
+  | **SigNet** | **ink 80%** (rule pick) | **0.900** | 16.7 | 0.992 | 2.9 | 0.466 | **9.56** | 8.38/9.37 | 0.11/2.92 |
+  | SigNet | ink 95% | 0.897 | 18.2 | 0.991 | 3.2 | 0.472 | 9.59 | 8.55/9.65 | 0.57/4.04 |
+  | SigNet | official GPDS | 0.867 | 20.6 | 0.984 | 6.3 | 0.494 | 9.47 | 8.55/9.37 | 0.42/1.11 |
+  | SigNet-F | ink 50% | 0.829 | 23.9 | 0.965 | 9.5 | 0.499 | 9.81 | 9.52/8.64 | 3.66/2.77 |
+  | SigNet-F | ink 65% | 0.805 | 27.3 | 0.964 | 9.1 | 0.490 | 9.59 | 9.26/9.60 | -1.55/1.38 |
+  | SigNet-F | ink 80% | 0.801 | 27.6 | 0.957 | 10.8 | 0.472 | 9.81 | 8.55/9.37 | -0.94/-1.75 |
+  | SigNet-F | ink 95% | 0.818 | 25.5 | 0.958 | 10.3 | 0.457 | 9.36 | 8.77/9.37 | -0.85/-1.60 |
+  | SigNet-F | official GPDS | 0.874 | 19.9 | 0.985 | 5.1 | 0.511 | 9.34 | 8.33/9.37 | 2.94/2.83 |
+
+  (EER in %.) Shipped single signals for reference: direction 0.937, pressure 0.921.
+* **Bootstrap** (200 paired writer resamples of OOF logits): rule pick (SigNet ink 80%)
+  gain 0.03 pt, mean -0.05, 90% **-0.41..0.27**, P(gain > 0) 0.34; best fused (SigNet-F
+  official) gain 0.25 pt, mean 0.11, 90% -0.41..0.61, P 0.61; SigNet ink 50% 0.22 pt,
+  -0.49..0.33.
+* **Finding:** no session shortcut (0.46-0.51), strong against random forgeries (AUC up to
+  0.993) but weaker than every shipped stroke signal on skilled forgeries, and redundant in
+  fusion (best gain 0.25 pt, SigNet-F gets negative weights). GPDS-trained global features
+  separate writers, not careful copies of the same name.
+* **Decision: rejected; nothing changed.** No candidate reaches the 0.5 pt bar, so no
+  integration, refit, dev clearance or val scoring was run (val 5.24 stands). Independently
+  of accuracy, the GPDS non-commercial restriction would block banking use of these weights.
+  Other released GPDS-family extractors (`sigver_wiwd`: SigNet-SPP 300/600 dpi) exist only
+  as Lasagne pickles and were not loaded (no execution of downloaded pickles).
+
+## EXP-024 — Pair-conditional scale harmonisation + keypoint-gated derotation (not merged)
+
+* Branch `exp/scale-rotation-invariance` (1034e50). When the two signatures' ink radius of
+  gyration differs by more than [0.8, 1.25], the larger image is re-extracted downsampled
+  (never upsampled); the questioned ink is derotated when the keypoint transform reports
+  10-30 degrees. Band fixed before results.
+* Dev writer-disjoint CV clean skilled EER 9.59% -> 9.81%; random 1.70% -> 2.18%.
+* Val clearance score 5.24 -> **5.17** (D 0.602, R 0.468, O 0.452): scale 0.5x EER 18.4% -> 12.7%,
+  scale 2x 17.2% -> 13.0%, rotation +20 14.3% -> 14.9%, -15 16.3% -> 16.3%, clean 11.76% -> 12.37%.
+* Cost: cross-writer pair comparison 9.6 -> 31.5 ms (re-extraction).
+* Not merged: lower frozen score. Kept on its branch because it is the better choice when
+  reference and questioned images come at very different resolutions.

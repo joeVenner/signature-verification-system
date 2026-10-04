@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Sequence
+from types import MappingProxyType
+from typing import Dict, Mapping, Optional, Sequence
 
 import cv2
 import numpy as np
 
-from signature_verification_system.src.core.config import DEFAULT_CONFIG, FusionModel, RepresentationParams
+from signature_verification_system.src.core.config import (
+    DEFAULT_CONFIG,
+    FUSION_SIGNALS,
+    FusionModel,
+    RepresentationParams,
+)
 from signature_verification_system.src.preprocessing.normalization import canonicalize
 from signature_verification_system.src.verification.features import SignatureFeatures, gradient_grid_descriptor
+from signature_verification_system.src.verification.stroke_geometry import StrokeSignals, stroke_signals
 
 
 @dataclass(frozen=True)
@@ -31,6 +38,7 @@ class PairSimilarity:
     keypoint: KeypointMatch
     fused_logit: float
     probability: float    # match probability under equal priors (over-confident; display only)
+    signals: Dict[str, float]   # every fused signal (config.FUSION_SIGNALS) plus the unfused "layout"
     alignment: Optional[Alignment] = None
     alignment_used: bool = False   # True only if the aligned layout score strictly beat the unaligned one
 
@@ -89,7 +97,7 @@ def aligned_shape(
     plausible transform (enough inliers, bounded rotation and scale), the
     specimen's letter-boxed ink map is warped onto the query's before the
     descriptor is computed. Returns None when no trustworthy alignment exists.
-    compare() is asymmetric by design (specimen `a` → query `b`). Rotation is in
+    The layout score is asymmetric by design (specimen `a` → query `b`). Rotation is in
     image coordinates (y down): a positive angle turns the specimen clockwise.
     """
     p = params or DEFAULT_CONFIG.representation
@@ -118,6 +126,23 @@ def ink_density_agreement(a: SignatureFeatures, b: SignatureFeatures) -> float:
     return float(min(a.ink_density, b.ink_density) / max(a.ink_density, b.ink_density, 1e-9))
 
 
+# Fused signal -> name reported by the explanation layer (and its reference file).
+EVIDENCE_SIGNAL_NAMES: Mapping[str, str] = MappingProxyType({
+    "stroke_direction": "stroke_direction_agreement",
+    "slant": "slant_agreement",
+    "column_profile": "horizontal_profile_agreement",
+    "row_profile": "vertical_profile_agreement",
+    "stroke_width": "stroke_width_agreement",
+    "pressure_pattern": "pressure_pattern_agreement",
+    "curvature": "stroke_curvature_agreement",
+})
+
+
+def pair_evidence_signals(pair: PairSimilarity) -> Dict[str, float]:
+    """The stroke-level signals of `pair`, keyed by their explanation names."""
+    return {EVIDENCE_SIGNAL_NAMES[name]: pair.signals[name] for name in EVIDENCE_SIGNAL_NAMES}
+
+
 def explanation_signals(
     a: SignatureFeatures, b: SignatureFeatures, pair: Optional[PairSimilarity] = None
 ) -> Dict[str, float]:
@@ -129,7 +154,27 @@ def explanation_signals(
         "keypoint_inliers": float(p.keypoint.inliers),
         "proportion_agreement": proportion_agreement(a, b),
         "ink_density_agreement": ink_density_agreement(a, b),
+        **pair_evidence_signals(p),
     }
+
+
+def fuse_signals(signals: Dict[str, float], fusion: FusionModel) -> float:
+    """Logistic fusion: bias + sum(weight * signal) over `FUSION_SIGNALS` (log-odds)."""
+    return float(fusion.bias + sum(fusion.signal_weights[name] * signals[name] for name in FUSION_SIGNALS))
+
+
+def _trusted_seed(k: KeypointMatch, p: RepresentationParams) -> Optional[np.ndarray]:
+    """The keypoint transform seeds the stroke alignment only when it is trustworthy."""
+    return k.transform if k.inliers >= p.align_min_inliers else None
+
+
+def _reverse_aligned_signals(a: SignatureFeatures, b: SignatureFeatures, p: RepresentationParams) -> StrokeSignals:
+    """Stroke signals with the roles swapped: questioned `b` aligned onto specimen `a` (EXP-019).
+
+    The keypoint match is recomputed in the b -> a direction (the Lowe ratio test is not
+    symmetric), exactly as compare(b, a) would do, so the reverse alignment gets its own seed.
+    """
+    return stroke_signals(b.stroke, a.stroke, _trusted_seed(keypoint_similarity(b, a, p), p), p.stroke)
 
 
 def compare(
@@ -138,16 +183,38 @@ def compare(
     fusion: Optional[FusionModel] = None,
     params: Optional[RepresentationParams] = None,
 ) -> PairSimilarity:
-    """Fuse the two similarities with a fixed logistic model (see config)."""
+    """Fuse all similarity signals of specimen `a` vs questioned `b` with the fixed logistic model.
+
+    The two signals read through the ICP stroke alignment (stroke direction, pressure
+    pattern) take the better of the a -> b and b -> a alignments, which makes them
+    symmetric in `a` and `b` (EXP-019). Every other fused signal is symmetric or nearly
+    so already; layout and keypoint keep the specimen -> query direction. Measured on dev:
+    CV skilled EER 10.58% -> 9.59% for ~5 ms more per pair (5.4 -> 10.2 ms; one feature
+    extraction is ~180 ms).
+    """
     f = fusion or DEFAULT_CONFIG.fusion
-    k = keypoint_similarity(a, b, params)
-    alignment = aligned_shape(a, b, k, params)
+    p = params or DEFAULT_CONFIG.representation
+    k = keypoint_similarity(a, b, p)
+    alignment = aligned_shape(a, b, k, p)
     unaligned = shape_similarity(a, b)
     used = alignment is not None and alignment.shape_similarity > unaligned
-    s = alignment.shape_similarity if used else unaligned
-    logit = f.bias + f.shape_weight * s + f.keypoint_weight * k.similarity
+    layout = alignment.shape_similarity if used else unaligned
+    strokes = stroke_signals(a.stroke, b.stroke, _trusted_seed(k, p), p.stroke)
+    reverse = _reverse_aligned_signals(a, b, p)
+    signals = {
+        "layout": layout,
+        "keypoint": k.similarity,
+        "stroke_direction": max(strokes.direction_agreement, reverse.direction_agreement),
+        "slant": strokes.slant,
+        "column_profile": strokes.column_profile,
+        "row_profile": strokes.row_profile,
+        "stroke_width": strokes.stroke_width,
+        "pressure_pattern": max(strokes.pressure_pattern, reverse.pressure_pattern),
+        "curvature": strokes.curvature,
+    }
+    logit = fuse_signals(signals, f)
     prob = float(1.0 / (1.0 + np.exp(-logit)))
-    return PairSimilarity(shape=s, keypoint=k, fused_logit=float(logit), probability=prob,
+    return PairSimilarity(shape=layout, keypoint=k, fused_logit=logit, probability=prob, signals=signals,
                           alignment=alignment, alignment_used=used)
 
 
@@ -166,9 +233,9 @@ def compare_multi(
     fusion: Optional[FusionModel] = None,
     params: Optional[RepresentationParams] = None,
 ) -> MultiReferenceSimilarity:
-    """Feature-wise max aggregation over enrolled references, then fusion.
+    """Signal-wise max aggregation over enrolled references, then fusion.
 
-    Each similarity takes its best value over the references independently
+    Each similarity signal takes its best value over the references independently
     (a genuine signature may match one specimen's layout and another's stroke
     detail). Chosen in EXP-003 over mean/max/median/top-2 of fused scores and
     cohort z-normalisation; ties resolve to the lowest reference index.
@@ -177,9 +244,9 @@ def compare_multi(
         raise ValueError("At least one reference signature is required")
     f = fusion or DEFAULT_CONFIG.fusion
     pairs = tuple(compare(r, query, f, params) for r in references)
-    shapes = [p.shape for p in pairs]
-    kps = [p.keypoint.similarity for p in pairs]
-    i_s, i_k = int(np.argmax(shapes)), int(np.argmax(kps))
-    logit = f.bias + f.shape_weight * shapes[i_s] + f.keypoint_weight * kps[i_k]
+    best = {name: max(p.signals[name] for p in pairs) for name in FUSION_SIGNALS}
+    i_s = int(np.argmax([p.shape for p in pairs]))
+    i_k = int(np.argmax([p.keypoint.similarity for p in pairs]))
+    logit = fuse_signals(best, f)
     prob = float(1.0 / (1.0 + np.exp(-logit)))
-    return MultiReferenceSimilarity(pairs, i_s, i_k, float(logit), prob)
+    return MultiReferenceSimilarity(pairs, i_s, i_k, logit, prob)

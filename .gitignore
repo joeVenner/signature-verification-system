@@ -28,3 +28,10 @@ benchmark/results/*.runtime.json
 CLAUDE.md
 .agent/
 .claude/
+
+# Local runtime settings (copy .env.example)
+.env
+
+# Slides (open-slide)
+node_modules/
+dist/

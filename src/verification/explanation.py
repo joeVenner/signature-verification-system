@@ -29,6 +29,13 @@ LABELS = {
     "keypoint_inliers": "Geometrically consistent stroke features",
     "proportion_agreement": "Signature proportions (width : height)",
     "ink_density_agreement": "Ink coverage density",
+    "stroke_direction_agreement": "Stroke direction along matching strokes",
+    "slant_agreement": "Overall writing slant",
+    "horizontal_profile_agreement": "Horizontal ink distribution (rhythm & spacing)",
+    "vertical_profile_agreement": "Vertical ink distribution (letter & loop heights)",
+    "stroke_width_agreement": "Pen stroke width",
+    "pressure_pattern_agreement": "Ink darkness pattern along matching strokes (pen pressure & speed)",
+    "stroke_curvature_agreement": "Stroke curvature distribution (fluency vs. drawn, angular strokes)",
 }
 
 
@@ -87,9 +94,7 @@ def build_explanation(
             "of_which_genuine": comp.get("genuine", 0),
             "of_which_skilled_forgery": comp.get("skilled", 0),
             "of_which_random_forgery": comp.get("random", 0),
-            "basis": ("2-fold writer-disjoint CV on 12 CEDAR writers (6 per fold): cut-offs re-selected on one "
-                      "fold, counted on the other; production cut-offs use all 12 writers. Random-forgery "
-                      "counts cover same-fold pairs only. Small sample: indicative, not a guarantee."),
+            "basis": ref["basis"],
         }
 
     verified = bool(signals)

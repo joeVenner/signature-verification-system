@@ -10,19 +10,22 @@ cheque → signature located → quality gate → normalise → compare with enr
        → ACCEPT / REVIEW / REJECT (validated thresholds) → clearing policy → explanation + audit
 ```
 
-## Results (held-out writers, raw scans; see [`benchmark/REPORT.md`](benchmark/REPORT.md))
+## Results (frozen 0–10 clearance score, one reference vs one questioned; see [`benchmark/REPORT.md`](benchmark/REPORT.md))
 
-| metric | legacy system | this system |
+| CEDAR slice (55 writers) | before | after |
 |---|---|---|
-| Skilled-forgery EER (1 specimen) | 19.3% (27.5% once a dataset shortcut is removed) | **11.1%** |
-| Skilled-forgery AUC | 0.877 | **0.934** |
-| Different-writer EER | 9.6% | **2.8%** |
-| 3 specimens: forgeries auto-accepted | 3 / 96 | **0 / 96** (and 0 / 2112 other writers) |
-| 3 specimens: genuine auto-accepted | 65% | **88%** |
-| Determinism | within a run | byte-identical across processes |
+| **Holdout, images 19–24 (scored once)** | 4.93 | **5.78** |
+| Test, images 13–18 (never tuned on) | 5.26 | **6.00** |
+| Validation, images 7–12 (drove decisions) | 3.88 | **5.24** |
 
-Measured on 12 CEDAR writers, which is a small sample. Read the report's
-limitations section before relying on these numbers.
+On the holdout: skilled-forgery EER 11.0% → **9.7%**, different-writer EER 3.9% → **2.9%**,
+genuine signatures auto-matched 14.3% → **28.5%**, forgeries auto-matched **0%** in every
+condition, printed text next to the signature 31.6% → **9.8%** EER, rotation ±15–20°
+17–20% → **13–14%** EER. Same input → byte-identical output over 100 runs.
+
+**Honest limits:** the 7/10 target was not reached; with one reference about two in three
+genuine signatures still go to manual review; benchmarked on lab scans (CEDAR), not on real
+counter photos. Read the report's limitations before relying on these numbers.
 
 ## Quick start
 
@@ -49,18 +52,30 @@ INCONCLUSIVE - IMAGE QUALITY) and a 0–100 similarity score aligned with it
 more originals: with a single original, genuine signatures go to manual review
 by design.
 
-### API
+### Live verification console + API
 
 ```bash
-uvicorn signature_verification_system.src.api.app:app --port 8000   # docs at /docs
+cp signature_verification_system/.env.example signature_verification_system/.env   # edit as needed
+python -m signature_verification_system.serve        # http://127.0.0.1:8765  (API docs at /docs)
 ```
 
+All settings (host, port, CORS, sample gallery folder, audit ledger paths, OpenCV pixel
+limit, CPU thread pinning) come from `.env`; variables already set in the shell win.
+Set `SIGVERIFY_SAMPLES_DIR` to a folder laid out like `data/samples` to enable the sample picker.
+
+* `/`: verification console (upload two signatures, see every pipeline stage, the signal contributions, score, confidence margin and verdict)
 * `POST /api/v1/signature/compare`: signature only (`reference_images[]`, `questioned_image`)
+* `POST /api/v1/signature/inspect`: the same result plus pipeline images and signal contributions
 * `POST /api/v1/cheque/process`: full cheque pipeline with clearing policy and audit record
 * `GET /api/v1/audit/verify-chain`: audit hash-chain integrity
 
 > Security posture is **demo-grade**: there is no authentication or rate limiting,
 > and the audit chain is unkeyed SHA-256. Run on localhost or a trusted network only.
+
+### Slides
+
+`slides/signature-verification/` is an [open-slide](https://www.npmjs.com/package/@open-slide/core)
+deck about the system: `npm install && npm run dev`, then open `/s/signature-verification`.
 
 ## Data (not included)
 
@@ -75,4 +90,5 @@ tests are skipped automatically.
 * [`benchmark/REPORT.md`](benchmark/REPORT.md): final benchmark (baseline vs final, FAR/FRR/AUC/EER, thresholds, robustness, runtime)
 * [`benchmark/experiments.md`](benchmark/experiments.md): every experiment, including rejected ones
 * [`DETERMINISM.md`](DETERMINISM.md): every source of nondeterminism and how it is controlled
+* [`benchmark/clearance_score.py`](benchmark/clearance_score.py): the frozen 0–10 score used for every decision
 * `00_INDEX.md` … `14_*.md`: background research notes
