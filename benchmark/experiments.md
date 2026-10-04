@@ -1041,3 +1041,64 @@ differences below ~2 EER points are within noise.
   36.8% -> 28.8%, so O fell slightly; multi-specimen nested skilled accept rose 0.35% ->
   0.56% (rule unchanged, not re-tuned). Genuine NOMATCH under scale / rotation is still
   12.8-18.3%.
+
+## EXP-020 — Elastic deformation evidence (rejected; production unchanged)
+
+* **Hypothesis:** a genuine signature differs from its reference by a small, smooth
+  deformation; a skilled forgery matches the global shape but needs larger, less coherent
+  local deformations. Measured on top of the shipped 8 signals (EXP-019 base: CV skilled
+  EER **9.59%**, AUC 0.9618, random 1.70%; folds 8.38 / 9.15).
+* **Method (dev only):** harmonized dev features cached once; for the `fit_fusion` pair set
+  (`--max-random 6000`; 825 genuine / 1980 skilled / 6000 random) each candidate is computed
+  after the existing global alignment (keypoint seed + ICP), in both directions (forward,
+  mean, min, max). Single AUC = genuine vs skilled; fused = writer-disjoint 2-fold CV
+  skilled EER with the candidate added to the 8 (`fit_fusion._fit`); weights reported per
+  fold after orienting the signal so that higher = more genuine.
+* **Candidate families** (best entries; ~120 variants in all):
+
+  | family | candidate | single AUC | fused EER | fold weights |
+  |---|---|---|---|---|
+  | smooth field | Gaussian displacement field (CPD-like, 5 iterations, σ 15/30/60 px, ≤ 400 control points): residual after the elastic fit, σ 30, mean | 0.899 | 9.67 | -6.90 / 2.60 |
+  | | incoherence of raw nearest-stroke displacements vs the smooth field, σ 30, max | 0.884 | 9.45 | -0.11 / 0.21 |
+  | | field gradient (roughness), σ 30, max | 0.821 | 9.23 | -0.44 / -0.26 (suppressor) |
+  | | displacement magnitude / 90th pct / fraction > 8 px / elastic gain | 0.52-0.83 | 9.36-9.59 | mixed or ~0 |
+  | contour DTW | upper+lower envelope (64 bins, band 10%), DTW cost, min | 0.848 | 9.94 | -0.09 / 0.06 |
+  | proportions | stroke-component centroid distance / component-count agreement | 0.717 / 0.621 | 9.70 / 9.94 | ~0 / mixed |
+
+  No candidate gives > 0.5 pt with positive weights in both folds. Like the ICP residual
+  (EXP-017), the field measures are strong alone but redundant with direction x coverage
+  and pressure x coverage.
+* **Elastic re-correspondence** (the one variant that changes information): warp every
+  aligned skeleton point by the smooth field (Gaussian interpolation of the control-point
+  field), redo the nearest-stroke correspondence, re-read stroke direction / pressure
+  pattern (global rotation kept for orientations), max over both directions.
+  Single AUC: elastic pressure 0.926 / 0.930 / 0.930 / 0.927 / 0.925 (σ 15/30/60/90/120)
+  vs 0.921 rigid; elastic direction 0.924-0.935 vs 0.937 rigid. Fused (σ 15/30/60/90/120):
+
+  | variant | skilled EER | note |
+  |---|---|---|
+  | replace direction | 9.45 / 9.34 / 9.47 / - / - | worse per fold |
+  | replace pressure | 9.45 / 9.12 / 9.20 / 9.34 / 9.36 | |
+  | replace both | 10.06 / 9.67 / 9.81 / - / - | |
+  | add direction | 9.56 / 9.59 / 9.59 / - / - | |
+  | **add pressure** | 9.34 / 9.09 / **8.98** / 9.34 / 9.45 | σ 60: folds 8.33 / 8.69, AUC 0.9626, random 1.81 |
+  | add both | 9.23 / 9.09 / 9.12 / - / - | elastic direction weight negative in fold 0 |
+
+  Checks on the best (add pressure): weight moves from rigid to elastic pressure (σ 60
+  fold weights rigid 0.86 / 3.34, elastic 7.58 / 8.29). Writer bootstrap (200 resamples of
+  the OOF logits) of the EER gain: σ 60 mean 0.24 pt, 90% interval -0.25..0.83,
+  P(gain > 0) 0.76; σ 30 mean 0.34 pt, -0.42..1.03. **Nested σ selection** (inner writer
+  2-fold inside each training fold, σ in {15, 30, 60, 90, 120}): folds pick σ 15 and 30,
+  pooled held-out skilled EER **9.31%** (gain 0.28 pt < 0.5 bar). Session-shortcut AUC
+  (different-writer genuine-genuine vs genuine-forgery, 2922 / 2915 pairs): elastic
+  pressure 0.502 / 0.505 (σ 30 / 60), rigid 0.510 - no shortcut.
+* **Cost:** elastic re-correspondence with its own keypoint + ICP alignment, both
+  directions, ~23 ms per pair (lab, single BLAS thread, 40 dev pairs) on top of ~10 ms.
+  With default BLAS threads under a 6-worker load the 400 x 400 kernel products took
+  ~500 ms per call (thread oversubscription), so any shipped version would need non-BLAS
+  products.
+* **Decision: rejected.** The 8.98% is the best of ~25 configurations chosen on the scoring
+  writers; selected honestly it is a 0.28 pt gain, AUC moves only +0.0008, and it would
+  cost ~2-3x the pair time. Production code, fusion, thresholds and evidence reference are
+  unchanged (val 5.24 stands; not re-scored). If revisited: reuse the shipped alignment
+  instead of recomputing it, and fix σ beforehand.
