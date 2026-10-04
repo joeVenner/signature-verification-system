@@ -651,7 +651,7 @@ differences below ~2 EER points are within noise.
 * `src/core/determinism.py`: `GLOBAL_SEED`, `OPENCV_THREADS`,
   `configure_determinism()` (applied at import of the feature extractor),
   `seeded_rng(offset)` (the only RNG; used by robustness noise, same values as before).
-* `DETERMINISM.md`: inventory of every potential nondeterminism source and how it
+* `docs/DETERMINISM.md`: inventory of every potential nondeterminism source and how it
   is handled. Only audit metadata (timestamps, uuid4 record ids) is intentionally
   non-deterministic, and it never feeds scores or decisions.
 * New test `TestCrossProcessDeterminism`: 3 fresh interpreters give an identical

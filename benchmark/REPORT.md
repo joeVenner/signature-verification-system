@@ -1,7 +1,7 @@
 # Signature Verification — Final Benchmark Report
 
 All numbers below are read from `benchmark/results/*.json` (byte-reproducible;
-see `DETERMINISM.md`). Full experiment history: `benchmark/experiments.md`.
+see `docs/DETERMINISM.md`). Full experiment history: `benchmark/experiments.md`.
 
 ## Final result (October 2026): frozen 0–10 clearance score, 1:1 (one reference vs one questioned)
 
@@ -172,7 +172,7 @@ Peak RSS during the benchmark is ~475 MB. No GPU is used.
 Benchmark, robustness and cheque-path JSON are byte-identical across separate
 processes (3 runs each, at every experiment), and so is `VerificationResult`
 across 3 fresh interpreters (`TestCrossProcessDeterminism`). Sources and controls:
-`DETERMINISM.md`.
+`docs/DETERMINISM.md`.
 
 ## Tests
 

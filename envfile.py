@@ -2,7 +2,7 @@
 
 Standard library only, on purpose: this module must run BEFORE numpy / OpenCV are
 imported, because BLAS / OpenMP thread counts and OpenCV's decoder pixel limit are
-read once when those libraries load (see DETERMINISM.md).
+read once when those libraries load (see docs/DETERMINISM.md).
 
 Format: one `KEY=VALUE` per line; blank lines and `#` comments are ignored; a ` # note`
 after an unquoted value is a comment; values may be wrapped in single or double quotes.
