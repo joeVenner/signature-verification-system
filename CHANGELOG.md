@@ -24,6 +24,7 @@ All notable changes to this project are documented here, following
 - `DETERMINISM.md` and `src/core/determinism.py` (single determinism control point).
 
 ### Changed
+- Stroke direction and pressure pattern now keep the better of the specimen->query and query->specimen alignments (symmetric); fusion, thresholds and evidence reference refitted. Dev CV skilled EER 10.58% -> 9.59%; val clean skilled EER 12.5% -> 11.8%, clearance score 5.06 -> 5.24; ~5 ms more per pair (EXP-019).
 - ACCEPT / REVIEW / REJECT thresholds are now selected from writer-disjoint out-of-fold logits (skilled q99.75 / random q99.9 + margin; genuine q5) with a nested held-out check. Single-specimen val genuine auto-match 28.2% -> 36.8%, genuine NOMATCH 8.0% -> 5.1%, skilled MATCH 0.3%; clearance score 4.98 -> 5.06 (EXP-018).
 - Fusion, thresholds and evidence reference refitted on harmonized dev images; the fitting scripts now harmonize by default (`--condition raw` reproduces older fits) (EXP-017).
 - `FusionModel` now holds one weight per signal (`signal_weights`, validated); fusion weights, ACCEPT / REVIEW / REJECT thresholds and the evidence reference were refitted on a 55-writer dev split. With three specimens genuine auto-accept falls (73% -> 29%) while skilled forgeries accepted fall 1.5% -> 0% on the untouched test slice.

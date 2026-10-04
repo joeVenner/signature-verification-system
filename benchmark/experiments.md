@@ -959,3 +959,80 @@ differences below ~2 EER points are within noise.
 * **Limits:** dev has only ~10 skilled pairs per 0.5%, so the skilled tail is coarse;
   hard_reject still rests on one extreme genuine (not scored); val genuine NOMATCH 5.1%
   sits just above the 5% target.
+
+## EXP-019 — Symmetric stroke alignment; cohort score normalisation rejected
+
+* **Question:** `compare(a, b)` aligns specimen -> query (keypoint RANSAC seed + ICP). Does a
+  symmetric comparison help, and does cohort normalisation against a fixed set of dev
+  genuines (no training) remove "generic signature scores high against everyone"?
+* **Method (dev only):** `compare(i, j)` signals for all 660 x 659 ordered harmonized dev
+  image pairs, cached once; every variant refits the fusion (`fit_fusion._fit`, same
+  `--max-random 6000` pair set) on one writer fold and scores the other. Baseline
+  reproduces fit_fusion: CV skilled EER **10.58%**, random 2.18%.
+* **Symmetric variants** (signals of compare(a, b) and compare(b, a), refit):
+
+  | variant | skilled EER | AUC | random EER |
+  |---|---|---|---|
+  | forward (production) | 10.58 | 0.9582 | 2.18 |
+  | backward only | 10.41 | 0.9533 | 2.42 |
+  | mean, all signals | 10.06 | 0.9596 | 2.07 |
+  | min, all signals | 11.27 | 0.9549 | 2.31 |
+  | concat (16 signals) | 10.19 | 0.9587 | 2.04 |
+  | max, all signals | 9.70 | 0.9611 | 1.80 |
+  | **max, stroke_direction + pressure_pattern only** | **9.59** | **0.9618** | **1.70** |
+  | mean, stroke_direction + pressure_pattern | 9.81 | 0.9607 | 2.05 |
+
+  Max on one signal at a time: pressure 9.34, direction 10.30, keypoint 10.91; slant,
+  profiles, width, curvature are already symmetric (identical numbers). The two ICP-read
+  signals are the asymmetric ones: the better of two alignments is a better alignment.
+  Per fold (forward -> shipped): 10.23 -> 8.38, 9.65 -> 9.15.
+* **Cohort normalisation** (honest: cohort = K genuines of the *other* fold's writers,
+  round-robin by writer; logits from the fold's own fusion). Skilled EER %:
+
+  | base / norm | K=20 | K=50 | K=100 |
+  |---|---|---|---|
+  | forward, Z-norm by reference | 12.95 | 12.37 | 12.62 |
+  | forward, Z-norm by query | 12.37 | 12.23 | 12.48 |
+  | forward, S-norm (Z, both sides) | 12.12 | 12.12 | 12.01 |
+  | forward, minus reference cohort mean | 11.16 | 11.27 | 11.40 |
+  | forward, minus mean of both cohort means | 9.81 | 10.06 | 10.06 |
+  | forward, minus query cohort mean | 9.56 | 9.59 | 9.59 |
+  | max-all, minus query cohort mean | 8.98 | 9.12 | 9.34 |
+  | max-all, minus both means | 9.20 | 9.31 | 9.34 |
+  | **shipped**, minus query cohort mean | 8.84 | 9.20 | not run |
+
+  Dividing by the cohort sigma always hurts (+1.4 to +2.8 pt). Mean offsets help the
+  forward score but add only 0.4-0.75 pt on top of the symmetric signals, not monotone in
+  K. Caveat variants (forward / max-all, minus both means): cohort from *all* other
+  dev writers (including test-fold ones) 10.80 / 10.17 at K=20, 10.17 / 9.70 at K=50;
+  "val-like" (same writers allowed, only the pair's images excluded; with K <= 55 only
+  the first K sorted writers can contribute) 10.69 / 9.81 at K=20, 10.08 / 9.34 at K=50,
+  i.e. no gain over the symmetric signals. Cost: K compares per side per request (K=20,
+  query side: ~200 ms, +55% of a request), a shipped cohort, and a logit that is no
+  longer the fused log-odds the thresholds and inspect breakdown assume. **Rejected:**
+  not robust above the 0.5 pt bar.
+* **Shipped:** `similarity.compare` computes stroke signals a second time with the roles
+  swapped (own b -> a keypoint seed) and keeps max(forward, reverse) for stroke_direction
+  and pressure_pattern. All consumers (1:1, multi-specimen max, fitting scripts,
+  clearance score, inspect) read `pair.signals`, so the fused log-odds is still
+  bias + sum(weight x signal); inspect's breakdown is unchanged and still sums exactly.
+  Refit (dev): CV skilled AUC 0.9618, EER **9.59%**, random 1.70%; all weights positive.
+  Thresholds (EXP-018 rule): single accept 5.5123 -> 6.3685, reject -0.6729 -> -0.6514,
+  hard -5.5863 -> -5.5909; multi accept 8.3837 -> 8.7599, reject 2.2261 -> 2.5911, hard
+  0.0533 -> -1.0847. Nested held-out single: genuine accept 53.2% / reject 4.5%, skilled
+  accept 0.35%, random accept 0%; multi: genuine 67.3% / 3.0%, skilled accept 0.56%.
+* **Dev clearance (in-sample):** 6.29 (D 0.725, R 0.580, O 0.549); clean skilled EER 8.73%.
+* **Val clearance (reported once):** 5.06 -> **5.24** (D 0.599 -> 0.622, R 0.409 -> 0.456,
+  O 0.479 -> 0.461, gate off). Clean skilled EER 12.48% -> **11.76%** (AUC 0.946), random
+  2.67% -> 2.54%. Operating point: genuine MATCH 28.8 / REVIEW 66.1 / NOMATCH 5.1%; skilled
+  MATCH 0.2 / NOMATCH 73.5%; random MATCH 0.0 / NOMATCH 99.7%. Condition EERs: tinted 11.4,
+  shadow 12.0, ruled 12.5, large canvas 11.6, distractor 11.7, faint 11.7, scale 0.5 18.4,
+  scale 2.0 17.2, rotate +20 14.3, rotate -15 16.3, phone 12.6. Max skilled MATCH over
+  conditions 0.2%.
+* **Cost:** compare 5.4 -> 10.2 ms per pair (serial, 200 dev pairs); `compare_signatures`
+  339 -> 375 ms per request (12 dev pairs, serial; the 1:1 path calls compare() more than
+  once).
+* **Limits:** the higher accept threshold (larger weight norm) lowered val genuine MATCH
+  36.8% -> 28.8%, so O fell slightly; multi-specimen nested skilled accept rose 0.35% ->
+  0.56% (rule unchanged, not re-tuned). Genuine NOMATCH under scale / rotation is still
+  12.8-18.3%.
