@@ -824,3 +824,32 @@ differences below ~2 EER points are within noise.
   must be re-checked when the samples are available. 12-writer figures elsewhere in this
   report are historical.
 * Tests: 65 passed, 3 skipped (adds 28 hermetic tests in `tests/test_stroke_geometry.py`).
+
+## EXP-016 — Isolate signature ink from printed rules and text (capture robustness)
+
+* **Problem:** `normalize_signature` cropped to all ink, so a printed caption and form rule
+  (`distractor_print`) set the crop (99% of val genuine pairs NO MATCH) and faint ruled
+  lines stayed as 0.12-darkness stripes inside the ink map (`ruled_lines`).
+* **Change:** `src/preprocessing/isolation.py`, applied to the darkness map before the crop.
+  (1) 1-px-tall grayscale opening, length 0.5 x width (odd, zero-padded border): a run is
+  removed if it is fainter than ink and <= 50% of it lies within 2 rows of ink, or if it is
+  ink-dark and >= 60% of the ink components it touches. (2) Printed-text groups (dilation
+  radius 2% of the diagonal): >= 6 glyphs, group height <= 1.5 x median glyph height, width
+  >= 6 x height. Never removes all ink.
+* **Rejected variants (dev, 660 images):** distance/mass clustering ("keep the main blob")
+  cannot work: clean CEDAR has detached parts up to 4.3x the main part's height away with
+  equal mass, while the caption sits 1.1-1.5x away. Unfiltered rule opening changed 19 clean
+  images (straight underline flourishes); with the OpenCV default border, strokes touching
+  the edge passed at half length. Purity + ink-contact filters bring this to 1/660 (a
+  scanner border line on a forgery scan).
+* **Triggers (dev):** rules removed 1/660 clean, 660/660 ruled_lines, 660/660 distractor;
+  text dropped 0/660 clean, 660/660 distractor.
+* **Dev clearance:** 5.03 -> 5.18 (R 0.430 -> 0.479); clean skilled EER 11.76% unchanged;
+  distractor_print EER 26.8% -> 11.9% (genuine NOMATCH 98.7% -> 4.6%); ruled_lines
+  12.1% -> 11.8% (genuine NOMATCH 7.3% -> 5.0%). Other conditions unchanged. No refit.
+* **Val clearance (reported once):** 3.88 -> 3.99 (D 0.502, R 0.313, O 0.348); clean
+  skilled EER 15.42%; distractor_print 31.4% -> 15.6% (genuine NOMATCH 99% -> 8.1%);
+  ruled_lines 17.0% -> 15.9% (genuine NOMATCH 11.3% -> 7.8%).
+* **Cost:** ~175 ms mean per extract on dev (proxy, 6 workers), within the prior budget.
+* **Limits:** only perfectly horizontal rules; an ink-dark rule fused with the signature
+  (signing across the line) is kept; vertical rules and stamps are not handled.
