@@ -19,6 +19,10 @@ import io
 import math
 import os
 
+from signature_verification_system.envfile import load_env_file
+
+# `.env` first, so its values reach OpenCV when cv2 is imported below (shell variables win).
+load_env_file()
 # Defence in depth against decompression bombs: OpenCV's own decode ceiling.
 # Must be set before cv2 is first imported in the process.
 os.environ.setdefault("OPENCV_IO_MAX_IMAGE_PIXELS", "50000000")
@@ -68,6 +72,8 @@ MAX_IMAGE_BYTES = 20 * 1024 * 1024
 MAX_IMAGE_PIXELS = 50_000_000
 MAX_ADDITIONAL_SPECIMENS = 9
 MAX_COMPARE_REFERENCES = 10
+DEFAULT_AUDIT_DB_PATH = "audit_ledger.db"
+DEFAULT_AUDIT_JSONL_PATH = "audit_ledger.jsonl"
 MAX_REQUEST_BYTES = 64 * 1024 * 1024   # whole-request cap (Content-Length); enforce at the proxy too
 # The console renders images from data:/blob: URLs and loads only Google Fonts; nothing else is allowed.
 CONTENT_SECURITY_POLICY = (
@@ -318,7 +324,11 @@ def create_app(
     """
     sample_catalog = samples if samples is not None else catalog_from_env()
     app_config = config or DEFAULT_CONFIG
-    logger = audit_logger or AuditLogger(config=app_config)
+    logger = audit_logger or AuditLogger(
+        db_path=os.environ.get("SIGVERIFY_AUDIT_DB_PATH", DEFAULT_AUDIT_DB_PATH),
+        jsonl_path=os.environ.get("SIGVERIFY_AUDIT_JSONL_PATH", DEFAULT_AUDIT_JSONL_PATH),
+        config=app_config,
+    )
     engine = decision_engine or DecisionEngine(config=app_config)
     sig_verifier = verifier or DeterministicVerifier(config=app_config)
     sig_locator = locator or SignatureLocator()

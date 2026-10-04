@@ -5,7 +5,11 @@ Synthetic-image tests always run; tests that need the samples are skipped
 instead of failing.
 """
 
+import os
 from pathlib import Path
+
+# Hermetic tests: never pick up a developer's local `.env` (see envfile.py).
+os.environ["SIGVERIFY_ENV_FILE"] = str(Path(__file__).resolve().parent / "no-such.env")
 
 _SAMPLE = Path(__file__).resolve().parent.parent / "data" / "samples" / "genuine_pairs" / "pair_01_cedar_w01_ref.png"
 _TEMPLATE = Path(__file__).resolve().parent.parent / "data" / "samples" / "cheques" / "cheque_procedural_pantograph_1001.png"

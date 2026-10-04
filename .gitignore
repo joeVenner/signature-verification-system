@@ -28,3 +28,6 @@ benchmark/results/*.runtime.json
 CLAUDE.md
 .agent/
 .claude/
+
+# Local runtime settings (copy .env.example)
+.env
