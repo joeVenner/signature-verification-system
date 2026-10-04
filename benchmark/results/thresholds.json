@@ -2,49 +2,95 @@
  "multi": {
   "cv_heldout_counts": {
    "genuine": {
-    "accept": 161,
+    "accept": 214,
     "n": 330,
-    "reject": 18
+    "reject": 13
    },
    "random": {
     "accept": 0,
     "n": 6480,
-    "reject": 6467
+    "reject": 6457
+   },
+   "skilled": {
+    "accept": 7,
+    "n": 1980,
+    "reject": 1630
+   }
+  },
+  "oof_counts": {
+   "genuine": {
+    "accept": 125,
+    "n": 330,
+    "reject": 16
+   },
+   "random": {
+    "accept": 0,
+    "n": 6480,
+    "reject": 6466
    },
    "skilled": {
     "accept": 0,
     "n": 1980,
-    "reject": 1827
+    "reject": 1778
    }
   },
   "production": {
-   "accept": 8.569003098584954,
-   "hard_reject": 0.5525607483250354,
-   "reject": 3.0380744507756674
+   "accept": 8.383690845870145,
+   "hard_reject": 0.053314685126238714,
+   "reject": 2.2260712652825134
+  },
+  "rule": {
+   "accept_margin": 1.5,
+   "max_random_match": 0.001,
+   "max_skilled_match": 0.0025,
+   "reject_genuine_quantile": 0.05
   }
  },
  "single": {
   "cv_heldout_counts": {
    "genuine": {
-    "accept": 324,
+    "accept": 453,
     "n": 825,
-    "reject": 43
+    "reject": 32
    },
    "random": {
     "accept": 0,
     "n": 2931,
-    "reject": 2924
+    "reject": 2908
+   },
+   "skilled": {
+    "accept": 6,
+    "n": 1980,
+    "reject": 1352
+   }
+  },
+  "oof_counts": {
+   "genuine": {
+    "accept": 332,
+    "n": 825,
+    "reject": 41
+   },
+   "random": {
+    "accept": 0,
+    "n": 2931,
+    "reject": 2923
    },
    "skilled": {
     "accept": 0,
     "n": 1980,
-    "reject": 1538
+    "reject": 1497
    }
   },
   "production": {
-   "accept": 6.364520488160036,
-   "hard_reject": -4.128048415541855,
-   "reject": -0.08027720251600101
+   "accept": 5.5123401627504585,
+   "hard_reject": -5.586339915027949,
+   "reject": -0.6728923393288113
+  },
+  "rule": {
+   "accept_margin": 1.0,
+   "max_random_match": 0.001,
+   "max_skilled_match": 0.0025,
+   "reject_genuine_quantile": 0.05
   }
  }
 }

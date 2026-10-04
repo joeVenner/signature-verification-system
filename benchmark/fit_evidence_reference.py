@@ -32,9 +32,10 @@ PKG = Path(__file__).resolve().parent.parent
 OUT = PKG / "src" / "verification" / "evidence_reference.json"
 QUANTILES = (0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95)
 
-BASIS = ("2-fold writer-disjoint CV on {writers} CEDAR writers: cut-offs re-selected on one fold, counted on "
-         "the other; production cut-offs use all {writers} writers. Random-forgery counts cover same-fold pairs "
-         "only. Indicative, not a guarantee.")
+BASIS = ("Nested 2-fold writer-disjoint CV on {writers} CEDAR writers: fusion refitted and cut-offs re-selected "
+         "(from inner out-of-fold logits) on one fold, counted on the other; production cut-offs come from "
+         "out-of-fold logits of all {writers} writers. Random-forgery counts cover same-fold pairs only. "
+         "Indicative, not a guarantee.")
 
 
 def _band_reliability(thresholds_path: Path) -> Dict[str, Dict[str, Dict[str, int]]]:

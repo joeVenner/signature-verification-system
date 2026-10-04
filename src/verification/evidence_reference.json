@@ -2,40 +2,40 @@
  "band_reliability": {
   "multi": {
    "ACCEPT": {
-    "genuine": 161,
+    "genuine": 214,
     "random": 0,
-    "skilled": 0
+    "skilled": 7
    },
    "REJECT": {
-    "genuine": 18,
-    "random": 6467,
-    "skilled": 1827
+    "genuine": 13,
+    "random": 6457,
+    "skilled": 1630
    },
    "REVIEW": {
-    "genuine": 151,
-    "random": 13,
-    "skilled": 153
+    "genuine": 103,
+    "random": 23,
+    "skilled": 343
    }
   },
   "single": {
    "ACCEPT": {
-    "genuine": 324,
+    "genuine": 453,
     "random": 0,
-    "skilled": 0
+    "skilled": 6
    },
    "REJECT": {
-    "genuine": 43,
-    "random": 2924,
-    "skilled": 1538
+    "genuine": 32,
+    "random": 2908,
+    "skilled": 1352
    },
    "REVIEW": {
-    "genuine": 458,
-    "random": 7,
-    "skilled": 442
+    "genuine": 340,
+    "random": 23,
+    "skilled": 622
    }
   }
  },
- "basis": "2-fold writer-disjoint CV on 55 CEDAR writers: cut-offs re-selected on one fold, counted on the other; production cut-offs use all 55 writers. Random-forgery counts cover same-fold pairs only. Indicative, not a guarantee.",
+ "basis": "Nested 2-fold writer-disjoint CV on 55 CEDAR writers: fusion refitted and cut-offs re-selected (from inner out-of-fold logits) on one fold, counted on the other; production cut-offs come from out-of-fold logits of all 55 writers. Random-forgery counts cover same-fold pairs only. Indicative, not a guarantee.",
  "signals": {
   "horizontal_profile_agreement": {
    "auc_genuine_vs_skilled": 0.8768,

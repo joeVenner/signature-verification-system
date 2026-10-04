@@ -41,25 +41,32 @@ class VerificationCalibration(BaseModel):
 class DecisionThresholds(BaseModel):
     """ACCEPT / REVIEW / REJECT cut-offs on the fused match logit (v3 verifier).
 
-    Selected by benchmark/select_thresholds.py on all enrolled writers with the
-    rule validated under writer-disjoint CV in EXP-004:
-      accept      = highest impostor (skilled + random) logit + accept_margin
-      reject      = 5th percentile of genuine logits (<= 5% genuine auto-rejected)
-      hard_reject = lowest genuine logit observed (below it: SIGNATURE_DIFFERS)
-    Separate operating points because one specimen is far less discriminative
-    than several (EXP-003).
+    Selected by benchmark/select_thresholds.py from OUT-OF-FOLD dev logits (fusion
+    refitted on one writer fold, scored on the other), because the production
+    fusion's dev logits are in-sample and over-separated (EXP-018):
+      accept      = max(skilled logit at the max_skilled_match_rate tail,
+                        random logit at the max_random_match_rate tail) + margin
+      reject      = genuine logit at the reject_genuine_quantile
+      hard_reject = lowest out-of-fold genuine logit (below it: SIGNATURE_DIFFERS)
+    The margins absorb the scale gap between half-data fold fits and the full fit,
+    sized by a nested writer-disjoint check. Separate operating points because one
+    specimen is far less discriminative than several (EXP-003).
     """
     accept_margin_logit: float = Field(default=1.0)
+    multi_accept_margin_logit: float = Field(default=1.5)
     reject_genuine_quantile: float = Field(default=0.05)
-    single_accept_logit: float = Field(default=6.3645)
-    single_reject_logit: float = Field(default=-0.0803)
-    single_hard_reject_logit: float = Field(default=-4.1280)
-    multi_accept_logit: float = Field(default=8.5690)
-    multi_reject_logit: float = Field(default=3.0381)
-    multi_hard_reject_logit: float = Field(default=0.5526)
+    max_skilled_match_rate: float = Field(default=0.0025)
+    max_random_match_rate: float = Field(default=0.001)
+    single_accept_logit: float = Field(default=5.5123)
+    single_reject_logit: float = Field(default=-0.6729)
+    single_hard_reject_logit: float = Field(default=-5.5863)
+    multi_accept_logit: float = Field(default=8.3837)
+    multi_reject_logit: float = Field(default=2.2261)
+    multi_hard_reject_logit: float = Field(default=0.0533)
     selected_on: str = Field(
         default="benchmark/select_thresholds.py on CEDAR-55w dev split, harmonized images, --max-random 6000 "
-                "--max-random-per-query 40 (single: 1:1 protocol; multi: 3-specimen protocol; EXP-017)"
+                "--max-random-per-query 40, out-of-fold logits (single: 1:1 protocol; multi: 3-specimen "
+                "protocol; EXP-018)"
     )
 
 
