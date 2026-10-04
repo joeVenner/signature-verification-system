@@ -24,6 +24,16 @@ class TestParseEnvFile(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             self.assertEqual(parse_env_file(self._write(tmp, "URL=a=b\n")), {"URL": "a=b"})
 
+    def test_inline_comment_and_quoted_hash(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = self._write(tmp, "A=1 # note\nB=\"x # y\" # note\nC=a#b\n")
+            self.assertEqual(parse_env_file(path), {"A": "1", "B": "x # y", "C": "a#b"})
+
+    def test_rejects_unterminated_quote(self) -> None:
+        with TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                parse_env_file(self._write(tmp, 'A="x\n'))
+
     def test_rejects_line_without_equals(self) -> None:
         with TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):
@@ -40,7 +50,13 @@ class TestLoadEnvFile(unittest.TestCase):
                 self.assertEqual(os.environ["SIGV_TEST_KEEP"], "shell")
                 self.assertEqual(os.environ["SIGV_TEST_NEW"], "file")
                 self.assertEqual(applied, {"SIGV_TEST_NEW": "file"})
-            os.environ.pop("SIGV_TEST_NEW", None)
+
+    def test_env_file_variable_selects_file(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "custom.env"
+            path.write_text("SIGV_TEST_PICKED=yes\n", encoding="utf-8")
+            with mock.patch.dict(os.environ, {"SIGVERIFY_ENV_FILE": str(path)}, clear=False):
+                self.assertEqual(load_env_file(), {"SIGV_TEST_PICKED": "yes"})
 
     def test_missing_file_is_not_an_error(self) -> None:
         self.assertEqual(load_env_file(Path("/nonexistent/.env")), {})

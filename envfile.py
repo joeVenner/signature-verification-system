@@ -4,8 +4,9 @@ Standard library only, on purpose: this module must run BEFORE numpy / OpenCV ar
 imported, because BLAS / OpenMP thread counts and OpenCV's decoder pixel limit are
 read once when those libraries load (see DETERMINISM.md).
 
-Format: one `KEY=VALUE` per line; blank lines and `#` comments are ignored; values may
-be wrapped in single or double quotes. Variables already present in the environment
+Format: one `KEY=VALUE` per line; blank lines and `#` comments are ignored; a ` # note`
+after an unquoted value is a comment; values may be wrapped in single or double quotes.
+An empty value (`KEY=`) means "use the built-in default". Variables already present in the environment
 always win, so a deployment can override any file value without editing it.
 """
 
@@ -36,10 +37,24 @@ def parse_env_file(path: Path) -> Dict[str, str]:
         key, value = key.strip(), value.strip()
         if not sep or not key:
             raise ValueError(f"{path}:{number}: expected KEY=VALUE")
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
-            value = value[1:-1]
-        values[key] = value
+        values[key] = _clean_value(value, path, number)
     return values
+
+
+def _clean_value(value: str, path: Path, number: int) -> str:
+    """Unquote a value; for unquoted values drop a trailing ` # comment`.
+
+    Raises:
+        ValueError: an opening quote is never closed.
+    """
+    if value[:1] in ("'", '"'):
+        quote = value[0]
+        end = value.find(quote, 1)
+        if end < 0:
+            raise ValueError(f"{path}:{number}: unterminated {quote} quote")
+        return value[1:end]
+    comment = value.find(" #")
+    return value[:comment].rstrip() if comment >= 0 else value
 
 
 def load_env_file(path: Optional[Path] = None) -> Dict[str, str]:
@@ -51,7 +66,7 @@ def load_env_file(path: Optional[Path] = None) -> Dict[str, str]:
     target = path or Path(os.environ.get(ENV_FILE_VAR) or DEFAULT_ENV_FILE)
     if not target.is_file():
         return {}
-    applied = {}
+    applied: Dict[str, str] = {}
     for key, value in parse_env_file(target).items():
         if key not in os.environ:
             os.environ[key] = value

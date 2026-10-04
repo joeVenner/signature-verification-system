@@ -22,10 +22,13 @@ import os
 from signature_verification_system.envfile import load_env_file
 
 # `.env` first, so its values reach OpenCV when cv2 is imported below (shell variables win).
+# Also applied by serve.py; repeated here so `uvicorn ...app:app` started directly behaves the
+# same. Idempotent: values already in the environment are never overwritten.
 load_env_file()
 # Defence in depth against decompression bombs: OpenCV's own decode ceiling.
 # Must be set before cv2 is first imported in the process.
-os.environ.setdefault("OPENCV_IO_MAX_IMAGE_PIXELS", "50000000")
+if not os.environ.get("OPENCV_IO_MAX_IMAGE_PIXELS"):   # unset or empty -> safe default
+    os.environ["OPENCV_IO_MAX_IMAGE_PIXELS"] = "50000000"
 import uuid
 from dataclasses import asdict
 from pathlib import Path
@@ -325,8 +328,8 @@ def create_app(
     sample_catalog = samples if samples is not None else catalog_from_env()
     app_config = config or DEFAULT_CONFIG
     logger = audit_logger or AuditLogger(
-        db_path=os.environ.get("SIGVERIFY_AUDIT_DB_PATH", DEFAULT_AUDIT_DB_PATH),
-        jsonl_path=os.environ.get("SIGVERIFY_AUDIT_JSONL_PATH", DEFAULT_AUDIT_JSONL_PATH),
+        db_path=os.environ.get("SIGVERIFY_AUDIT_DB_PATH") or DEFAULT_AUDIT_DB_PATH,
+        jsonl_path=os.environ.get("SIGVERIFY_AUDIT_JSONL_PATH") or DEFAULT_AUDIT_JSONL_PATH,
         config=app_config,
     )
     engine = decision_engine or DecisionEngine(config=app_config)
@@ -346,7 +349,7 @@ def create_app(
 
     # Explicit origin allow-list from the environment; no credentials (the API is
     # unauthenticated, see SECURITY notes in benchmark/experiments.md EXP-010).
-    origins = [o.strip() for o in os.environ.get("SIGVERIFY_CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()]
+    origins = [o.strip() for o in (os.environ.get("SIGVERIFY_CORS_ORIGINS") or "http://localhost:3000").split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

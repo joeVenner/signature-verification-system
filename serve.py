@@ -17,13 +17,19 @@ DEFAULT_PORT = 8765
 
 
 def main() -> None:
-    load_env_file()
+    try:
+        load_env_file()
+    except ValueError as exc:
+        raise SystemExit(f"Invalid .env file: {exc}") from None
+    port_text = os.environ.get("SIGVERIFY_PORT") or str(DEFAULT_PORT)
+    if not port_text.isdigit() or not 0 < int(port_text) < 65536:
+        raise SystemExit(f"SIGVERIFY_PORT must be a port number, got {port_text!r}")
     import uvicorn  # imported after the environment is final
 
     uvicorn.run(
         "signature_verification_system.src.api.app:app",
-        host=os.environ.get("SIGVERIFY_HOST", DEFAULT_HOST),
-        port=int(os.environ.get("SIGVERIFY_PORT", DEFAULT_PORT)),
+        host=os.environ.get("SIGVERIFY_HOST") or DEFAULT_HOST,
+        port=int(port_text),
         workers=1,
     )
 
