@@ -8,7 +8,7 @@ Evaluates:
 4. Per-stage latency profiling (IQA, binarization, HOG, Hu, skeleton, distance, audit).
 5. Cheque signature localization accuracy and clearing tier distributions.
 
-Saves full structured output to signature_verification_system/eval_results_initial.json.
+Saves full structured output to signature_verification_system/docs/legacy/eval_results_initial.json.
 """
 
 from __future__ import annotations
@@ -724,7 +724,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--output",
-        default="signature_verification_system/eval_results_initial.json",
+        default="signature_verification_system/docs/legacy/eval_results_initial.json",
         help="Path to output JSON file",
     )
     args = parser.parse_args()

@@ -26,7 +26,7 @@ All notable changes to this project are documented here, following
 - `ChequeVerificationPipeline` orchestrator; composed-cheque judge demo (`scripts/demo_showcase.py`, `demo_cli.py demo`).
 - Signature-only comparison mode: `POST /api/v1/signature/compare`, `demo_cli.py compare`.
 - Leak-free benchmark suite (1:1, 3-specimen, robustness, cheque path), experiment log and final report.
-- `DETERMINISM.md` and `src/core/determinism.py` (single determinism control point).
+- `docs/DETERMINISM.md` and `src/core/determinism.py` (single determinism control point).
 
 ### Changed
 - Stroke direction and pressure pattern now keep the better of the specimen->query and query->specimen alignments (symmetric); fusion, thresholds and evidence reference refitted. Dev CV skilled EER 10.58% -> 9.59%; val clean skilled EER 12.5% -> 11.8%, clearance score 5.06 -> 5.24; ~5 ms more per pair (EXP-019).

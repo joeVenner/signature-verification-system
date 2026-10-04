@@ -544,7 +544,7 @@ const VlmFit: Page = () => (
         <FitRow tone="bad" text="No calibrated, repeatable score" detail="Answers shift with wording and model updates" />
       </FitColumn>
     </div>
-    <Explain>VLM (vision-language model): an AI that looks at images and answers in text, like GPT, Claude or Gemini. Source: BiDA Lab zero-shot study, summarised in 05_VLM_LIMITATIONS.md.</Explain>
+    <Explain>VLM (vision-language model): an AI that looks at images and answers in text, like GPT, Claude or Gemini. Source: BiDA Lab zero-shot study, summarised in docs/research/05_VLM_LIMITATIONS.md.</Explain>
     <Footer />
   </div>
 );

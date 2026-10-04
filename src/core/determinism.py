@@ -1,4 +1,4 @@
-"""Single source of truth for every determinism control (see DETERMINISM.md).
+"""Single source of truth for every determinism control (see docs/DETERMINISM.md).
 
 The verification path itself uses no randomness. The controls here cover:
 * OpenCV worker threads: pinned to 1 so no result depends on scheduling.

@@ -89,6 +89,8 @@ tests are skipped automatically.
 
 * [`benchmark/REPORT.md`](benchmark/REPORT.md): final benchmark (baseline vs final, FAR/FRR/AUC/EER, thresholds, robustness, runtime)
 * [`benchmark/experiments.md`](benchmark/experiments.md): every experiment, including rejected ones
-* [`DETERMINISM.md`](DETERMINISM.md): every source of nondeterminism and how it is controlled
+* [`docs/DETERMINISM.md`](docs/DETERMINISM.md): every source of nondeterminism and how it is controlled
 * [`benchmark/clearance_score.py`](benchmark/clearance_score.py): the frozen 0–10 score used for every decision
-* `00_INDEX.md` … `14_*.md`: background research notes
+* [`docs/research/`](docs/research/00_INDEX.md): background research notes (state of the art, datasets, VLM limits, cheque pipeline, build vs buy)
+* [`docs/legacy/`](docs/legacy/): the previous v2 system report and its evaluation outputs
+* [`docs/DISCOVERIES/`](docs/DISCOVERIES/): dated engineering log
