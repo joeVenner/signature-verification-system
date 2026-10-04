@@ -102,6 +102,13 @@ const Heading = ({ children }: { children: ReactNode }) => (
   </h2>
 );
 
+/** One-line plain-language definition of a technical term used on the page. */
+const Explain = ({ children }: { children: ReactNode }) => (
+  <div style={{ position: 'absolute', left: PAD, right: PAD, bottom: 104, fontSize: 24, color: muted, borderLeft: '3px solid var(--osd-accent)', paddingLeft: 18, lineHeight: 1.4 }}>
+    {children}
+  </div>
+);
+
 const Footer = () => {
   const { current, total } = useSlidePageNumber();
   return (
@@ -250,9 +257,9 @@ const Pipeline: Page = () => {
           <Stage n="02" title="Isolate the ink" sub="Print & ruled lines dropped" delay={0.5} />
           <Stage n="03" title="Normalise" sub="Crop, flat-field, denoise" delay={0.8} />
           <Stage n="04" title="Trace strokes" sub="Skeleton + pen width" delay={1.1} />
-          <Stage n="05" title="Align" sub="ICP, both directions" delay={1.4} />
+          <Stage n="05" title="Align" sub="Overlay strokes, both ways" delay={1.4} />
           <Stage n="06" title="Measure" sub="8 similarity signals" delay={1.7} />
-          <Stage n="07" title="Fuse" sub="Fixed logistic weights" delay={2.0} />
+          <Stage n="07" title="Fuse" sub="Weighted sum → one score" delay={2.0} />
           <Stage n="08" title="Decide" sub="Validated thresholds" delay={2.3} last />
         </div>
       </div>
@@ -289,10 +296,10 @@ const Signals: Page = () => (
     <Eyebrow>What it compares</Eyebrow>
     <Heading>Forgers copy the shape. Not the hand.</Heading>
     <div style={{ display: 'flex', gap: 40, marginTop: 64 }}>
-      <HeroSignal name="Stroke direction" what="Do matched strokes travel the same way?" auc="single-signal AUC 0.937" delay={0.2} />
-      <HeroSignal name="Pressure pattern" what="Is the ink darkest in the same places?" auc="single-signal AUC 0.907" delay={0.5} />
+      <HeroSignal name="Stroke direction" what="Do matched strokes travel the same way?" auc="AUC 0.937 on its own" delay={0.2} />
+      <HeroSignal name="Pressure pattern" what="Is the ink darkest in the same places?" auc="AUC 0.907 on its own" delay={0.5} />
     </div>
-    <div style={{ fontFamily: MONO, fontSize: 22, color: dim, letterSpacing: '0.18em', marginTop: 64 }}>PLUS SIX SUPPORTING SIGNALS</div>
+    <div style={{ fontFamily: MONO, fontSize: 22, color: dim, letterSpacing: '0.18em', marginTop: 56 }}>PLUS SIX SUPPORTING SIGNALS</div>
     <div style={{ display: 'flex', gap: 20, marginTop: 24 }}>
       <SmallSignal name="Keypoints" />
       <SmallSignal name="Slant" />
@@ -301,6 +308,7 @@ const Signals: Page = () => (
       <SmallSignal name="Pen width" />
       <SmallSignal name="Curvature" />
     </div>
+    <Explain>AUC: how often a genuine pair outscores a forgery. 1.0 is perfect, 0.5 is guessing.</Explain>
     <Footer />
   </div>
 );
@@ -428,7 +436,8 @@ const Benchmarks: Page = () => (
       <Metric label="Genuine auto-matched" before={15.9} after={33.2} lowerIsBetter={false} delay={1.1} />
       <Metric label="Half-size image (EER)" before={15.9} after={17.5} lowerIsBetter delay={1.4} />
     </div>
-    <p style={{ fontSize: 28, color: muted, marginTop: 56 }}>Forgeries auto-matched: 0% before, 0% after. Grey = before, colour = after.</p>
+    <p style={{ fontSize: 28, color: muted, marginTop: 48 }}>Forgeries auto-matched: 0% before, 0% after. Grey = before, colour = after.</p>
+    <Explain>EER (equal error rate): the error when false accepts equal false rejects. Lower is better.</Explain>
     <Footer />
   </div>
 );
@@ -493,6 +502,112 @@ const Limits: Page = () => (
 );
 
 // ---------------------------------------------------------------------------
+// VLMs: where they excel, where they fail
+// ---------------------------------------------------------------------------
+
+const FitRow = ({ text, detail, tone }: { text: string; detail: string; tone: 'good' | 'bad' }) => (
+  <div style={{ display: 'flex', gap: 20, alignItems: 'baseline', padding: '18px 0', borderBottom: `1px solid ${rule}` }}>
+    <span style={{ fontFamily: MONO, fontSize: 28, color: tone === 'good' ? good : bad, width: 28, flexShrink: 0 }}>{tone === 'good' ? '+' : '–'}</span>
+    <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span style={{ fontSize: 32 }}>{text}</span>
+      <span style={{ fontSize: 24, color: muted }}>{detail}</span>
+    </span>
+  </div>
+);
+
+const FitColumn = ({ title, tone, delay, children }: { title: string; tone: 'good' | 'bad'; delay: number; children: ReactNode }) => {
+  const anim = useAnim();
+  return (
+    <div style={{ flex: 1, ...anim(`sv-rise 0.7s ease-out ${delay}s both`) }}>
+      <div style={{ fontFamily: MONO, fontSize: 22, letterSpacing: '0.18em', color: tone === 'good' ? good : bad, paddingBottom: 12, borderBottom: `2px solid ${tone === 'good' ? good : bad}` }}>{title}</div>
+      {children}
+    </div>
+  );
+};
+
+const VlmFit: Page = () => (
+  <div style={{ ...fill, padding: PAD }}>
+    <Keyframes />
+    <Eyebrow>What about a VLM?</Eyebrow>
+    <Heading>A brilliant reader. An unreliable judge.</Heading>
+    <div style={{ display: 'flex', gap: 72, marginTop: 48 }}>
+      <FitColumn title="WHERE VLMS EXCEL" tone="good" delay={0.2}>
+        <FitRow tone="good" text="Reading handwriting" detail="Names, amounts and dates on a cheque" />
+        <FitRow tone="good" text="Spotting a different person" detail="~0.3% error when the writer is someone else" />
+        <FitRow tone="good" text="Finding the signature on a page" detail="Photos, forms, cheques, clutter" />
+        <FitRow tone="good" text="Explaining in plain words" detail="Turning measurements into a case note" />
+      </FitColumn>
+      <FitColumn title="WHERE THEY FAIL" tone="bad" delay={0.6}>
+        <FitRow tone="bad" text="Skilled forgeries" detail="32–48% error, close to a coin flip (ours: 9.7%)" />
+        <FitRow tone="bad" text="Tiny tremors and pen lifts" detail="They see the image in 14–16 px tiles" />
+        <FitRow tone="bad" text="Reasoning makes it worse" detail="They talk themselves into accepting forgeries" />
+        <FitRow tone="bad" text="No calibrated, repeatable score" detail="Answers shift with wording and model updates" />
+      </FitColumn>
+    </div>
+    <Explain>VLM (vision-language model): an AI that looks at images and answers in text, like GPT, Claude or Gemini. Source: BiDA Lab zero-shot study, summarised in 05_VLM_LIMITATIONS.md.</Explain>
+    <Footer />
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Recommendation: VLM as advisor around the deterministic core
+// ---------------------------------------------------------------------------
+
+const RoleCard = ({ n, title, text, delay }: { n: string; title: string; text: string; delay: number }) => {
+  const anim = useAnim();
+  return (
+    <div style={{ background: panel, border: `1px solid ${rule}`, borderRadius: 'var(--osd-radius)', padding: '24px 28px', ...anim(`sv-rise 0.6s ease-out ${delay}s both`) }}>
+      <div style={{ fontFamily: MONO, fontSize: 20, color: 'var(--osd-accent)', letterSpacing: '0.14em' }}>VLM · {n}</div>
+      <div style={{ fontSize: 32, fontWeight: 600, marginTop: 10 }}>{title}</div>
+      <div style={{ fontSize: 24, color: muted, marginTop: 8, lineHeight: 1.4 }}>{text}</div>
+    </div>
+  );
+};
+
+const Arrow = ({ delay }: { delay: number }) => {
+  const anim = useAnim();
+  return (
+    <div style={{ width: 90, height: 2, background: 'var(--osd-accent)', position: 'relative', transformOrigin: 'left', ...anim(`sv-grow 0.6s ease-out ${delay}s both`) }}>
+      <div style={{ position: 'absolute', right: -2, top: -7, width: 0, height: 0, borderTop: '8px solid transparent', borderBottom: '8px solid transparent', borderLeft: '14px solid var(--osd-accent)' }} />
+    </div>
+  );
+};
+
+const VlmPlan: Page = () => {
+  const anim = useAnim();
+  return (
+    <div style={{ ...fill, padding: PAD }}>
+      <Keyframes />
+      <Eyebrow>Our recommendation</Eyebrow>
+      <Heading>The VLM advises. The core decides.</Heading>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 28, marginTop: 56 }}>
+        <div style={{ width: 470 }}>
+          <RoleCard n="1 · BEFORE" title="Find and check the signature" text="Locate it on a photo or cheque; flag stamps, screens, no signature." delay={0.2} />
+        </div>
+        <Arrow delay={0.8} />
+        <div style={{ flex: 1, textAlign: 'center', border: '2px solid var(--osd-accent)', borderRadius: 'var(--osd-radius)', padding: '40px 24px', background: 'rgba(201,164,92,0.08)', ...anim('sv-rise 0.7s ease-out 1s both, sv-glow 3.5s ease-in-out 1.8s infinite') }}>
+          <div style={{ fontFamily: MONO, fontSize: 20, color: 'var(--osd-accent)', letterSpacing: '0.14em' }}>THE JUDGE</div>
+          <div style={{ fontFamily: 'var(--osd-font-display)', fontSize: 40, fontWeight: 600, marginTop: 12 }}>Deterministic core</div>
+          <div style={{ fontSize: 24, color: muted, marginTop: 10 }}>MATCH · REVIEW · NO MATCH</div>
+        </div>
+        <Arrow delay={1.4} />
+        <div style={{ width: 470, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <RoleCard n="2 · AFTER" title="Case note for the reviewer" text="Plain words from our measured signals only." delay={1.6} />
+          <RoleCard n="3 · AROUND" title="Read the cheque" text="Name, amount, date checked against the account." delay={1.9} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 20, marginTop: 56, ...anim('sv-fade 0.8s ease-out 2.4s both') }}>
+        <Chip>NEVER IN THE DECISION</Chip>
+        <Chip>ANSWERS CACHED BY IMAGE</Chip>
+        <Chip>LOCAL MODEL · DATA STAYS IN</Chip>
+      </div>
+      <Explain>Cached by image: each VLM answer is stored under the image's fingerprint (hash), so a re-run replays it exactly and the audit shows what it said.</Explain>
+      <Footer />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // 10 Next
 // ---------------------------------------------------------------------------
 
@@ -518,6 +633,38 @@ const Next: Page = () => (
       <NextCard rank="03" title="A licensed model" text="A commercially licensed signature network, frozen, on CPU." delay={0.8} />
     </div>
     <p style={{ fontFamily: MONO, fontSize: 26, color: muted, marginTop: 80 }}>Try it live: python -m signature_verification_system.serve → localhost:8765</p>
+    <Footer />
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Glossary
+// ---------------------------------------------------------------------------
+
+const Term = ({ word, meaning }: { word: string; meaning: string }) => (
+  <div style={{ padding: '16px 0', borderBottom: `1px solid ${rule}` }}>
+    <div style={{ fontFamily: MONO, fontSize: 24, color: 'var(--osd-accent)' }}>{word}</div>
+    <div style={{ fontSize: 28, marginTop: 6, lineHeight: 1.35 }}>{meaning}</div>
+  </div>
+);
+
+const Glossary: Page = () => (
+  <div style={{ ...fill, padding: PAD }}>
+    <Keyframes />
+    <Eyebrow>Plain-language glossary</Eyebrow>
+    <Heading>Words used in this deck.</Heading>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 72, marginTop: 40 }}>
+      <Term word="Skilled forgery" meaning="Someone practised copying the real signature." />
+      <Term word="Deterministic" meaning="Same input, exactly the same output, every time." />
+      <Term word="EER" meaning="Error when false accepts equal false rejects. Lower is better." />
+      <Term word="AUC" meaning="How often genuine outscores forgery. 1.0 is perfect." />
+      <Term word="Clearance score" meaning="Our 0–10 grade, fixed before any tuning started." />
+      <Term word="Holdout" meaning="Images kept aside and scored once, at the very end." />
+      <Term word="Alignment" meaning="Shifting one signature's strokes to sit on the other." />
+      <Term word="Fusion" meaning="A weighted sum of all signals into one score." />
+      <Term word="Capture conditions" meaning="Simulated real-world damage: shadow, rotation, print." />
+      <Term word="VLM" meaning="AI that looks at images and answers in text." />
+    </div>
     <Footer />
   </div>
 );
@@ -566,7 +713,12 @@ export const notes: (string | undefined)[] = [
   'Green got better, red got worse. Half-size images regressed slightly; the fix exists on a branch but cost clean accuracy.',
   'We report what failed too. Over 160 configurations rejected because the gain did not survive resampling the writers.',
   'Be direct: 7/10 was not reached. With one reference, most genuine signatures still need a human.',
+  `Natural question: why not ask a VLM like GPT or Claude? They read handwriting very well and easily spot a completely different writer.
+But on skilled forgeries they are close to a coin flip, they cannot see 1-3 pixel tremors, step-by-step reasoning makes them accept forgeries, and they give no calibrated or repeatable score.`,
+  `So the VLM becomes an advisor around the core, never the judge. Before: find and check the signature on messy photos. After: write the reviewer a case note from our measured numbers. Around: read the cheque fields.
+Determinism is kept because the decision never depends on the VLM, and each VLM answer is cached by image fingerprint so a re-run replays it. Run it locally so customer data stays in the bank.`,
   'The levers that matter now are data and references, not more tuning. Invite people to try the live console.',
+  'Leave this page up during questions: it defines every technical term used in the deck.',
 ];
 
 export const meta: SlideMeta = {
@@ -574,4 +726,4 @@ export const meta: SlideMeta = {
   createdAt: '2026-10-04T09:37:51.461Z',
 };
 
-export default [Cover, Problem, Pipeline, Signals, Determinism, Score, Benchmarks, Failed, Limits, Next] satisfies Page[];
+export default [Cover, Problem, Pipeline, Signals, Determinism, Score, Benchmarks, Failed, Limits, VlmFit, VlmPlan, Next, Glossary] satisfies Page[];
