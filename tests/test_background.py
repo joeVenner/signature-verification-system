@@ -289,7 +289,7 @@ class TestQualityGateOnTexture(unittest.TestCase):
         img[specks] = 30
         q = assess_signature_quality(img)
         self.assertFalse(q.passed)
-        self.assertIn("BACKGROUND_NOT_SEPARABLE", q.blocking_issues)
+        self.assertEqual(q.blocking_issues, ["BACKGROUND_NOT_SEPARABLE"])
 
     def test_verifier_gives_a_verdict_on_a_textured_field_crop(self):
         reference, _ = signature(textured=False, width=640, seed=1)

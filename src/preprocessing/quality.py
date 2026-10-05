@@ -125,8 +125,9 @@ def _measure(image: np.ndarray, prepared: Optional[PreparedSignature]) -> Signat
     if contrast >= MIN_INK_CONTRAST and sharpness < MIN_EDGE_SHARPNESS:
         blocking.append("IMAGE_TOO_BLURRY")
     if not prepared.separable:
+        # The raw texture is what makes the noise ratio high here; one cause, one issue.
         blocking.append("BACKGROUND_NOT_SEPARABLE")
-    if noise_ratio > MAX_NOISE_RATIO:
+    elif noise_ratio > MAX_NOISE_RATIO:
         blocking.append("EXCESSIVE_NOISE")
     elif noise_ratio > WARN_NOISE_RATIO:
         warnings.append("ELEVATED_NOISE")
