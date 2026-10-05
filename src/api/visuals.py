@@ -24,6 +24,12 @@ ACCENT_BGR: Tuple[int, int, int] = (160, 96, 31)       # #1F60A0
 INK_BGR: Tuple[int, int, int] = (55, 52, 47)           # #2F3437
 FAINT_INK_BGR: Tuple[int, int, int] = (222, 220, 218)
 KEYPOINT_BGR: Tuple[int, int, int] = (45, 47, 159)     # #9F2F2D
+KEYPOINT_RING_RADIUS = 3
+# SIFT keeps coarse-octave blob extrema whose centres sit in loop interiors or the
+# gaps between letters (~21% of keypoints on CEDAR are > 3 px from ink). Drawing
+# them as dots reads as "detected in empty space", so only centres close enough
+# for the marker ring to touch the stroke are drawn; the rest are counted instead.
+KEYPOINT_MAX_STROKE_DISTANCE_PX = float(KEYPOINT_RING_RADIUS)
 
 
 def encode_png(image: np.ndarray) -> str:
@@ -103,14 +109,44 @@ def _faint_canvas(ink: np.ndarray, width: int, height: int) -> np.ndarray:
     return np.round(paper * (1.0 - alpha) + faint * alpha).astype(np.uint8)
 
 
+def on_stroke_keypoints(ink: np.ndarray, keypoints: Optional[np.ndarray], width: int, height: int,
+                        ink_threshold: float,
+                        max_distance_px: float = KEYPOINT_MAX_STROKE_DISTANCE_PX) -> np.ndarray:
+    """Mask of keypoints whose centre lies within `max_distance_px` of stroke ink.
+
+    Args:
+        ink: tight-crop ink-darkness map (1 = darkest ink), as used for detection.
+        keypoints: (N, 2) (x, y) coordinates on the letter-boxed canvas, or None.
+        width, height: the letter-boxed keypoint canvas.
+        ink_threshold: normalised darkness above which a canvas pixel is stroke.
+        max_distance_px: largest centre-to-ink distance still drawn as on-stroke.
+
+    Returns:
+        (N,) bool array; empty when there are no keypoints.
+    """
+    if keypoints is None or len(keypoints) == 0:
+        return np.zeros(0, dtype=bool)
+    stroke = canonicalize(ink, width, height, keep_aspect=True) > ink_threshold
+    if not stroke.any():
+        return np.zeros(len(keypoints), dtype=bool)
+    distance = cv2.distanceTransform((~stroke).astype(np.uint8), cv2.DIST_L2, 5)
+    xy = np.round(np.asarray(keypoints, dtype=np.float64)).astype(np.int64)
+    xs, ys = np.clip(xy[:, 0], 0, width - 1), np.clip(xy[:, 1], 0, height - 1)
+    return distance[ys, xs] <= max_distance_px
+
+
 def render_strokes(ink: np.ndarray, skeleton_points: Optional[np.ndarray], keypoints: Optional[np.ndarray],
                    width: int, height: int) -> str:
-    """Skeleton (stroke centre-lines) and SIFT keypoints on the shared comparison canvas."""
+    """Skeleton (stroke centre-lines) and the given SIFT keypoints on the shared comparison canvas.
+
+    Callers choose which keypoints to draw (see `on_stroke_keypoints`); every point
+    passed is drawn at its detection coordinates, unmoved.
+    """
     canvas = _faint_canvas(ink, width, height)
     _plot_points(canvas, skeleton_points, INK_BGR)
     if keypoints is not None:
         for x, y in np.round(np.asarray(keypoints, dtype=np.float64)).astype(np.int64):
-            cv2.circle(canvas, (int(x), int(y)), 3, KEYPOINT_BGR, 1, cv2.LINE_AA)
+            cv2.circle(canvas, (int(x), int(y)), KEYPOINT_RING_RADIUS, KEYPOINT_BGR, 1, cv2.LINE_AA)
     return encode_png(canvas)
 
 

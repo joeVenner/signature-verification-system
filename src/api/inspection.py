@@ -18,7 +18,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 
 from signature_verification_system.src.api import visuals
-from signature_verification_system.src.core.config import FUSION_SIGNALS
+from signature_verification_system.src.core.config import FUSION_SIGNALS, RepresentationParams
 from signature_verification_system.src.verification.deterministic import DeterministicVerifier
 from signature_verification_system.src.verification.features import SignatureFeatures, extract_features
 from signature_verification_system.src.verification.signature_compare import (
@@ -49,7 +49,9 @@ SIGNAL_LABELS: Dict[str, str] = {
 
 class StrokeStats(BaseModel):
     skeleton_points: int
-    keypoints: int
+    keypoints: int = Field(..., description="All SIFT keypoints used for matching")
+    keypoints_off_stroke: int = Field(
+        0, description="Keypoints whose centre lies off the strokes (coarse-scale blobs); counted, not drawn")
     stroke_width_px: float = Field(..., description="Mean pen width on the comparison canvas")
     ink_density: float
     aspect_ratio: float
@@ -147,7 +149,7 @@ def _features_or_error(image: np.ndarray, verifier: DeterministicVerifier) -> tu
 
 
 def inspect_image(image: np.ndarray, feats: Optional[SignatureFeatures], error: Optional[str],
-                  canvas_w: int, canvas_h: int) -> ImageInspection:
+                  params: RepresentationParams) -> ImageInspection:
     """Render every intermediate that exists for one image."""
     h, w = image.shape[:2]
     base = ImageInspection(width=w, height=h, original_png=visuals.render_original(image), error=error)
@@ -155,14 +157,17 @@ def inspect_image(image: np.ndarray, feats: Optional[SignatureFeatures], error: 
         return base
     norm, stroke = feats.normalized, feats.stroke
     skeleton = getattr(stroke, "skeleton_points", None)
+    canvas_w, canvas_h = params.keypoint_canvas_width, params.keypoint_canvas_height
+    on_stroke = visuals.on_stroke_keypoints(norm.ink, feats.keypoints, canvas_w, canvas_h, params.stroke.ink_threshold)
     return base.model_copy(update={
         "harmonised_png": visuals.render_harmonised(norm.gray, norm.bbox),
         "ink_crop_png": visuals.render_ink_crop(norm.ink),
-        "strokes_png": visuals.render_strokes(norm.ink, skeleton, feats.keypoints, canvas_w, canvas_h),
+        "strokes_png": visuals.render_strokes(norm.ink, skeleton, feats.keypoints[on_stroke], canvas_w, canvas_h),
         "bbox": [int(v) for v in norm.bbox],
         "stats": StrokeStats(
             skeleton_points=0 if skeleton is None else int(len(skeleton)),
             keypoints=int(len(feats.keypoints)),
+            keypoints_off_stroke=int(len(feats.keypoints) - np.count_nonzero(on_stroke)),
             stroke_width_px=round(float(getattr(stroke, "stroke_width", 0.0)), 3),
             ink_density=round(float(feats.ink_density), 4),
             aspect_ratio=round(float(feats.aspect_ratio), 4),
@@ -241,8 +246,8 @@ def inspect_signatures(reference: np.ndarray, questioned: np.ndarray,
     p = verifier.config.representation
     ref_feats, ref_err = _features_or_error(reference, verifier)
     que_feats, que_err = _features_or_error(questioned, verifier)
-    ref_view = inspect_image(reference, ref_feats, ref_err, p.keypoint_canvas_width, p.keypoint_canvas_height)
-    que_view = inspect_image(questioned, que_feats, que_err, p.keypoint_canvas_width, p.keypoint_canvas_height)
+    ref_view = inspect_image(reference, ref_feats, ref_err, p)
+    que_view = inspect_image(questioned, que_feats, que_err, p)
 
     alignment = fusion = None
     consistency = Consistency()
