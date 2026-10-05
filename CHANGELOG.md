@@ -38,6 +38,9 @@ All notable changes to this project are documented here, following
 - API and CLI cheque processing run through the single pipeline and accept several specimens.
 - `is_match` is true only for ACCEPT.
 
+### Fixed
+- Inspect view "Stroke representation": keypoint markers no longer appear in loop interiors or between letters. Coarse-scale SIFT keypoints whose centre lies more than 3 px from ink are now counted (`stats.keypoints_off_stroke`) instead of drawn. Display only: the keypoints used for matching and all scores are unchanged.
+
 ### Security
 - Content-Security-Policy and `X-Content-Type-Options: nosniff` on every response; inspect no longer returns raw exception text.
 - The API no longer reads server filesystem paths supplied by clients.
