@@ -168,6 +168,36 @@ class TestDimensionLimits(unittest.TestCase):
         self.assertEqual(upscale_factor(100, 200), LOWRES_TARGET_WIDTH / 200)
 
 
+class TestFailureHandling(unittest.TestCase):
+    def test_gate_never_raises_on_preprocessing_failure(self):
+        from unittest import mock
+
+        def boom(*_args, **_kwargs):
+            raise cv2.error("internal detail")
+
+        with mock.patch("signature_verification_system.src.preprocessing.quality.prepare_signature", boom):
+            q = assess_signature_quality(signature(True, 208)[0])
+        self.assertFalse(q.passed)
+        self.assertEqual(q.blocking_issues, ["PREPROCESSING_FAILED"])
+
+    def test_gate_blocks_unsupported_dtype(self):
+        q = assess_signature_quality(np.zeros((90, 210), np.float64))
+        self.assertEqual(q.blocking_issues, ["PREPROCESSING_FAILED"])
+
+    def test_opencv_failure_in_normalisation_is_inconclusive_without_details(self):
+        from unittest import mock
+
+        def boom(*_args, **_kwargs):
+            raise cv2.error("internal detail")
+
+        reference, _ = signature(textured=False, width=640, seed=1)
+        questioned, _ = signature(textured=True, width=208, seed=2)
+        with mock.patch("signature_verification_system.src.preprocessing.normalization.prepare_signature", boom):
+            result = DeterministicVerifier().verify(reference, questioned)
+        self.assertEqual(result.decision_band, "INCONCLUSIVE")
+        self.assertNotIn("internal detail", result.model_dump_json())
+
+
 class TestQualityGateOnTexture(unittest.TestCase):
     def test_legible_signature_on_guilloche_passes(self):
         q = assess_signature_quality(signature(True, 208)[0])

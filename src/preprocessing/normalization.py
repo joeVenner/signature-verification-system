@@ -132,12 +132,17 @@ def normalize_signature(image: np.ndarray) -> NormalizedSignature:
     prepared image.
 
     Raises:
-        ValueError: if the image is empty or contains no detectable ink.
+        ValueError: if the image is empty, unsupported, fails preprocessing or
+            contains no detectable ink.
     """
     if image is None or image.size == 0:
         raise ValueError("Empty signature image")
     gray, inverted = ensure_dark_ink(to_gray(image))
-    harmonized = harmonize_photometric(prepare_signature(image, gray).work_image)
+    try:
+        harmonized = harmonize_photometric(prepare_signature(image, gray).work_image)
+    except cv2.error as exc:
+        # ValueError is the verifier's INCONCLUSIVE path; the OpenCV message stays out of responses.
+        raise ValueError("Image preprocessing failed") from exc
     darkness = (255.0 - harmonized.astype(np.float64)) / 255.0
     # Printed rules and caption text would otherwise set the crop (EXP-016).
     darkness = isolate_signature_ink(darkness, INK_MASK_LEVEL)

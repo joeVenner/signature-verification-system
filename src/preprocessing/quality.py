@@ -11,6 +11,7 @@ do not block.
 
 from __future__ import annotations
 
+import logging
 from typing import List, Optional
 
 import cv2
@@ -29,6 +30,9 @@ MIN_INK_PIXELS = 150          # ink pixels at the ink mask level
 MIN_SIGNATURE_HEIGHT = 16     # px of the ink bounding box
 MIN_SIGNATURE_WIDTH = 32
 BORDER_MARGIN = 2             # ink within this many px of the edge => possibly cropped
+
+
+_LOG = logging.getLogger(__name__)
 
 
 class SignatureQuality(BaseModel):
@@ -67,6 +71,17 @@ def assess_signature_quality(image: Optional[np.ndarray]) -> SignatureQuality:
     """
     if image is None or image.size == 0 or min(image.shape[:2]) < 4:
         return _blocked("EMPTY_OR_INVALID_IMAGE")
+    try:
+        return _measure(image)
+    except (cv2.error, MemoryError, ValueError):
+        # Unsupported layouts / dtypes or an OpenCV failure must make the
+        # verification INCONCLUSIVE, never an API error. Details go to the log only.
+        _LOG.warning("Signature quality preprocessing failed", exc_info=True)
+        return _blocked("PREPROCESSING_FAILED")
+
+
+def _measure(image: np.ndarray) -> SignatureQuality:
+    """Quality signals for a non-empty image (may raise on unsupported input)."""
     input_u8, inverted = ensure_dark_ink(to_gray(image))
     prepared = prepare_signature(image, input_u8)
     if not prepared.dimensions_supported:
