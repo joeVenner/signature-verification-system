@@ -1305,6 +1305,11 @@ differences below ~2 EER points are within noise.
 | composite, both textured: score, EER | 0.00, 42.4% | 0.52, 29.2% |
 | clearance val | 5.236 | 5.255 (clean sha256 identical; scale_0.5 18.5% -> 16.7%) |
 
+* Caveat: detector threshold, upscale rule and extraction options were compared on val
+  composites and val scale_0.5, so the val rows above are in-sample. Out-of-sample check on
+  cedar55_dev composites (same builder, not used for any choice): score 0.00 -> 2.39, mixed
+  skilled EER 37.6% -> 23.1%, INCONCLUSIVE 11.4% -> 0.3%, grey 33.5 -> 13.8%, tint 30.6 ->
+  13.1%, bcsd_real 40.5 -> 33.2%, clean_lowres 22.7 -> 12.1%, skilled MATCH 0.0%.
 * Remaining gap: bcsd_real (dark printed text, barcodes, rules as dark as ink). Not texture;
   needs print/ink separation (colour, glyph regularity).
 * Cost: detection ~16 ms per call (runs in the gate and in normalisation).
