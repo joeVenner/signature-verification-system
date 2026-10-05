@@ -1,0 +1,177 @@
+"""Textured cheque backgrounds: detection, ink extraction, quality gate (EXP-025).
+
+All images are synthetic and seeded: a known stroke mask drawn over a dense
+wavy guilloche, then downscaled to a ~200 px field crop.
+"""
+
+import unittest
+
+import cv2
+import numpy as np
+
+from signature_verification_system.src.preprocessing.background import (
+    LOWRES_MAX_WIDTH,
+    LOWRES_TARGET_WIDTH,
+    extract_ink_layer,
+    measure_background_texture,
+    prepare_signature,
+)
+from signature_verification_system.src.preprocessing.isolation import isolate_signature_ink
+from signature_verification_system.src.preprocessing.normalization import INK_MASK_LEVEL, harmonize_photometric
+from signature_verification_system.src.preprocessing.quality import assess_signature_quality
+from signature_verification_system.src.verification.deterministic import DeterministicVerifier
+
+CANVAS_H, CANVAS_W = 270, 640
+PAPER = 238.0
+INK = 45.0
+
+
+def _strokes() -> np.ndarray:
+    """Signature-like stroke coverage in [0, 1] on the full-size canvas."""
+    canvas = np.zeros((CANVAS_H, CANVAS_W), np.uint8)
+    t = np.linspace(0.0, 1.0, 400)
+    for k in range(3):
+        x = 60 + 520 * t
+        y = 110 + 25 * k + 60 * np.sin(2 * np.pi * (1.5 + k) * t + k) * np.exp(-3 * (t - 0.3 - 0.2 * k) ** 2)
+        cv2.polylines(canvas, [np.stack([x, y], 1).astype(np.int32)], False, 255, 7, cv2.LINE_AA)
+    cv2.ellipse(canvas, (180, 90), (40, 28), 0, 0, 360, 255, 7, cv2.LINE_AA)
+    return canvas.astype(np.float64) / 255.0
+
+
+def _guilloche(depth: float = 0.35) -> np.ndarray:
+    """Paper with one family of wavy lines (period ~4 px after downscaling to 208 px)."""
+    yy, xx = np.mgrid[0:CANVAS_H, 0:CANVAS_W].astype(np.float64)
+    phase = 2 * np.pi * (yy + 8 * np.sin(2 * np.pi * xx / 110.0)) / 12.0
+    return PAPER * (1.0 - depth * np.clip(np.cos(phase), 0.0, 1.0) ** 1.5)
+
+
+def _capture(full: np.ndarray, width: int, seed: int) -> np.ndarray:
+    h = round(CANVAS_H * width / CANVAS_W)
+    small = cv2.resize(full, (width, h), interpolation=cv2.INTER_AREA)
+    noise = np.random.default_rng(seed).normal(0.0, 3.0, small.shape)
+    return np.clip(small + noise, 0, 255).astype(np.uint8)
+
+
+def signature(textured: bool = True, width: int = 208, seed: int = 0, strokes: bool = True):
+    """(uint8 image, bool ground-truth stroke mask) at the requested width."""
+    a = _strokes() if strokes else np.zeros((CANVAS_H, CANVAS_W))
+    paper = _guilloche() if textured else np.full((CANVAS_H, CANVAS_W), PAPER)
+    img = _capture(paper * (1.0 - a) + INK * a, width, seed)
+    gt = cv2.resize(a, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_AREA) > 0.5
+    return img, gt
+
+
+def verifier_ink_mask(image: np.ndarray) -> np.ndarray:
+    """Mask the verifier crops on: normalisation darkness above INK_MASK_LEVEL."""
+    darkness = (255.0 - harmonize_photometric(image).astype(np.float64)) / 255.0
+    return isolate_signature_ink(darkness, INK_MASK_LEVEL) > INK_MASK_LEVEL
+
+
+def iou(pred: np.ndarray, gt: np.ndarray) -> float:
+    if pred.shape != gt.shape:
+        pred = cv2.resize(pred.astype(np.uint8), (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_AREA) > 0
+    return float((pred & gt).sum()) / float((pred | gt).sum())
+
+
+class TestTextureDetector(unittest.TestCase):
+    def test_guilloche_is_textured(self):
+        for width in (208, 640):
+            report = measure_background_texture(signature(True, width)[0])
+            self.assertTrue(report.is_textured, (width, report))
+
+    def test_clean_and_ruled_paper_are_not_textured(self):
+        img, _ = signature(textured=False, width=640)
+        self.assertFalse(measure_background_texture(img).is_textured)
+        ruled = img.copy()
+        ruled[18::36] = (ruled[18::36] * 0.75).astype(np.uint8)   # clearance-score ruled_lines style
+        ruled[19::36] = (ruled[19::36] * 0.75).astype(np.uint8)
+        self.assertFalse(measure_background_texture(ruled).is_textured)
+
+    def test_extracted_layer_is_not_textured_again(self):
+        prepared = prepare_signature(*(lambda i: (i, i))(signature(True, 208)[0]))
+        self.assertTrue(prepared.background_removed)
+        self.assertFalse(measure_background_texture(prepared.work_image).is_textured)
+
+
+class TestInkExtraction(unittest.TestCase):
+    def test_extraction_recovers_stroke_mask(self):
+        for width in (208, 640):
+            img, gt = signature(True, width)
+            before = iou(verifier_ink_mask(img), gt)
+            after = iou(verifier_ink_mask(prepare_signature(img, img).work_image), gt)
+            self.assertGreaterEqual(after, 0.8, (width, before, after))
+            self.assertLess(before, 0.7, (width, before, after))
+
+    def test_background_becomes_white_paper_and_ink_keeps_its_darkness(self):
+        img, gt = signature(True, 640)
+        layer = extract_ink_layer(img)
+        self.assertIsNotNone(layer)
+        far = cv2.dilate(gt.astype(np.uint8), np.ones((9, 9), np.uint8)) == 0
+        self.assertGreater(float(np.mean(layer[far] == 255)), 0.99)
+        core = cv2.erode(gt.astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
+        self.assertGreater(float(np.std(layer[core])), 0.0)   # not binarised
+        self.assertLess(float(np.median(layer[core])), 100.0)
+
+    def test_pure_texture_is_not_separable(self):
+        texture_only, _ = signature(True, 640, strokes=False)
+        self.assertIsNone(extract_ink_layer(texture_only))
+
+    def test_deterministic(self):
+        img, _ = signature(True, 208)
+        a, b = prepare_signature(img, img), prepare_signature(img.copy(), img.copy())
+        self.assertEqual(a.work_image.tobytes(), b.work_image.tobytes())
+        self.assertEqual(a.gate_image.tobytes(), b.gate_image.tobytes())
+
+
+class TestRouting(unittest.TestCase):
+    def test_clean_full_size_image_is_passed_through_unchanged(self):
+        img, _ = signature(textured=False, width=640)
+        bgr = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        prepared = prepare_signature(bgr, img)
+        self.assertIs(prepared.work_image, bgr)
+        self.assertIs(prepared.gate_image, bgr)
+        self.assertEqual(prepared.upscale, 1.0)
+
+    def test_small_crop_is_upscaled_but_gated_at_input_resolution(self):
+        img, _ = signature(textured=False, width=200)
+        self.assertLess(img.shape[1], LOWRES_MAX_WIDTH)
+        prepared = prepare_signature(img, img)
+        self.assertEqual(prepared.work_image.shape[1], LOWRES_TARGET_WIDTH)
+        self.assertIs(prepared.gate_image, img)
+        self.assertFalse(prepared.background_removed)
+
+
+class TestQualityGateOnTexture(unittest.TestCase):
+    def test_legible_signature_on_guilloche_passes(self):
+        q = assess_signature_quality(signature(True, 208)[0])
+        self.assertTrue(q.passed, q.blocking_issues)
+        self.assertTrue(q.background_removed)
+        self.assertIn("TEXTURED_BACKGROUND_REMOVED", q.warnings)
+        self.assertLess(q.noise_ratio, 0.06)
+
+    def test_pure_noise_stays_blocked(self):
+        rng = np.random.default_rng(7)
+        for img in (np.clip(rng.normal(180, 40, (90, 210)), 0, 255).astype(np.uint8),
+                    rng.integers(0, 256, (90, 210)).astype(np.uint8)):
+            q = assess_signature_quality(img)
+            self.assertFalse(q.passed)
+            self.assertIn("EXCESSIVE_NOISE", q.blocking_issues)
+
+    def test_texture_with_only_dark_specks_is_blocked(self):
+        img, _ = signature(True, 208, strokes=False)
+        specks = np.random.default_rng(3).random(img.shape) < 0.01
+        img[specks] = 30
+        q = assess_signature_quality(img)
+        self.assertFalse(q.passed)
+        self.assertIn("BACKGROUND_NOT_SEPARABLE", q.blocking_issues)
+
+    def test_verifier_gives_a_verdict_on_a_textured_field_crop(self):
+        reference, _ = signature(textured=False, width=640, seed=1)
+        questioned, _ = signature(textured=True, width=208, seed=2)
+        result = DeterministicVerifier().verify(reference, questioned)
+        self.assertNotEqual(result.decision_band, "INCONCLUSIVE", result.notes)
+        self.assertTrue(result.quality["questioned"]["background_removed"])
+
+
+if __name__ == "__main__":
+    unittest.main()

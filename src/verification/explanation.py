@@ -105,6 +105,10 @@ def build_explanation(
         qq = quality.get("questioned") or {}
         if verified and qq.get("polarity_inverted"):
             preprocessing.append("Inverted polarity detected and corrected")
+        if verified and qq.get("background_removed"):
+            preprocessing.append("Textured security background removed; ink extracted before analysis")
+        if verified and "LOW_RESOLUTION_UPSCALED" in qq.get("warnings", []):
+            preprocessing.append("Low-resolution crop upscaled before analysis")
         q_section = {
             "questioned_passed": qq.get("passed"),
             "ink_contrast": qq.get("ink_contrast"),

@@ -17,6 +17,7 @@ from typing import Tuple
 import cv2
 import numpy as np
 
+from signature_verification_system.src.preprocessing.background import prepare_signature
 from signature_verification_system.src.preprocessing.isolation import isolate_signature_ink
 
 PAPER_CLOSE_KERNEL = 15     # px; larger than any stroke width in 256-900 px crops
@@ -126,13 +127,17 @@ def _flat_field_pass(gray: np.ndarray) -> np.ndarray:
 def normalize_signature(image: np.ndarray) -> NormalizedSignature:
     """Harmonise and tight-crop a signature image.
 
+    Textured (cheque security) backgrounds are removed and small crops are
+    upscaled first (see background.py); `bbox` and `gray` then refer to that
+    prepared image.
+
     Raises:
         ValueError: if the image is empty or contains no detectable ink.
     """
     if image is None or image.size == 0:
         raise ValueError("Empty signature image")
-    _, inverted = ensure_dark_ink(to_gray(image))
-    harmonized = harmonize_photometric(image)
+    gray, inverted = ensure_dark_ink(to_gray(image))
+    harmonized = harmonize_photometric(prepare_signature(image, gray).work_image)
     darkness = (255.0 - harmonized.astype(np.float64)) / 255.0
     # Printed rules and caption text would otherwise set the crop (EXP-016).
     darkness = isolate_signature_ink(darkness, INK_MASK_LEVEL)
