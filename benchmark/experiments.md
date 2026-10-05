@@ -1317,3 +1317,68 @@ differences below ~2 EER points are within noise.
 * Remaining gap: bcsd_real (dark printed text, barcodes, rules as dark as ink). Not texture;
   needs print/ink separation (colour, glyph regularity).
 * Cost: detection ~16 ms per call (runs in the gate and in normalisation).
+
+## EXP-026 — Capture-resolution matching by pen width (not merged)
+
+* Problem: 1:1 verification with very different capture resolutions (e.g. a 417x214 specimen
+  scan vs a 208x86 cheque crop). M-001 showed scale 0.5 / 2.0 got worse after EXP-017.
+* Diagnosis (dev, production fusion, clean reference vs perturbed query). Skilled AUC per signal:
+
+| signal | clean | scale 0.5 | scale 2.0 | cheque clean_lowres |
+| --- | --- | --- | --- | --- |
+| stroke_width | 0.698 | 0.506 | 0.598 | 0.561 |
+| curvature | 0.745 | 0.587 | 0.625 | 0.627 |
+| keypoint | 0.855 | 0.830 | 0.769 | 0.825 |
+| pressure_pattern | 0.921 | 0.909 | 0.856 | 0.918 |
+| stroke_direction / slant / profiles / layout | | within 0.02 of clean | | |
+| fused EER (skilled) | 8.73% | 13.80% | 12.48% | 12.10% |
+
+  Cause: the canvas pen width is not proportional to resolution (blur and fixed-pixel
+  smoothing add a floor): genuine canvas width ratio vs clean, median 1.32 (0.5x), 0.83 (2x),
+  1.24 (cheque). Oracle (clean values substituted): curvature alone 13.80 -> 11.05 (0.5x),
+  12.10 -> 9.59 (cheque); stroke_width alone 13.80 -> 12.26; both 10.44.
+* L-002 hypothesis (overall size is identity evidence) confirmed: on clean dev the size-ratio
+  signal has skilled AUC 0.689 / random 0.849, and stroke_width correlates 0.67 with it. The
+  ink radius-of-gyration trigger cannot separate capture from writer.
+* Capture cue: mean pen width in source px (skeleton x distance transform on the normalised
+  ink, divided by the low-res upscale). Clean dev 3.94-6.58 px (genuine and forgeries), every
+  other capture condition 3.85-6.88; scale 2.0 6.2-9.9; cheque 1.4-4.4; scale 0.5 split: the
+  30% that take the < 256 px upscale route 2.2-2.4, the rest blur-inflated to 3.7-4.8 (inside
+  the clean band). Band [3.6, 7.0], target 5.2 (dev median), fixed before the CV below.
+* Configurations, declared up front (dev, writer-disjoint 2-fold CV, fusion refit per fold;
+  writer bootstrap n=300, 90% CI, EER points vs K0):
+
+| cfg | change | clean skl | scale 0.5 | scale 2.0 | cheque lowres | guilloche grey / tint | R11 mean |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| K0 | baseline | 9.59 | 13.47 | 13.22 | 12.10 | 13.83 / 14.05 | 11.01 |
+| K1 | per image: pen > 7.0 -> downsample to 5.2 (2 passes) | 0 (bit-identical) | 0 | -3.55 [-5.23, -1.82] | 0 | 0 / 0 | -0.32 [-0.48, -0.17] |
+| K2 | K1 + per pair: pen < 3.6 -> downsample partner to same pen | 0 (bit-identical) | -0.29 [-1.10, +0.45] | -3.55 | -1.29 [-3.28, +0.69] | -2.24 / -2.27 (CIs < 0) | -0.35 [-0.52, -0.16] |
+| K3 | curvature normalised by ink extent (refit) | +0.40 [-0.20, +1.10] | -1.17 | -0.57 | -0.92 | -1.32 / -1.36 | +0.17 |
+| K4 | K2 + K3 (refit) | +0.40 | -1.71 | -3.18 | -1.50 | -2.02 / -2.23 | -0.12 |
+| K5 | K4 + original curvature as 9th signal (refit) | -0.03 | -0.32 | -3.51 | -1.32 | -2.20 / -2.18 | -0.35 |
+
+  Upsampling coarse images instead (to pen 5.2) was measured first and does not help
+  (scale 0.5 13.80 -> 14.05, cheque 12.10 -> 13.44, production fusion): it cannot undo blur.
+  Extent-normalised curvature is scale invariant (skilled AUC 0.681-0.687 in every condition)
+  but loses clean power (0.745 -> 0.681). Winner on dev: K2 (no refit, simplest).
+* Val, scored once (K2): clearance **5.255 -> 5.301** (D 0.622, R 0.462 -> 0.477, O 0.461), clean
+  sha256 identical, skilled MATCH 0.15% (unchanged). scale 2.0 EER 17.2% -> **12.1%** (genuine
+  NOMATCH 17.2% -> 6.4%); scale 0.5 16.7% -> **17.7%** (genuine NOMATCH 13.8% -> 13.2%); the other
+  nine conditions bit-identical. K1 alone, derived exactly from the same runs: 5.311.
+* Cheque composites, val (refs clean), off -> K2: score 1.85 -> 2.31, mixed skilled / random EER
+  23.8 / 12.5% -> 22.8 / 10.4%, genuine MATCH 9.9 -> 15.3%, NOMATCH 30.3 -> 24.5%, skilled MATCH
+  0.1 -> 0.0%; clean_lowres EER 15.4 -> 15.2% (genuine MATCH 16.7 -> 28.4%, NOMATCH 11.6 -> 7.4%);
+  grey 16.9 -> 15.2%, tint 16.1 -> 16.5%, bcsd_real 31.8 -> 30.8%. K1 does not touch composites.
+* Latency (`verify()`, median of 5, threads pinned): clean pair 505 -> 504 ms; 2x query
+  1332 -> 1649 ms; cheque-size query 392 -> 453 ms (L-002: ~3x pair time).
+* Not merged: keep bar requires every scale condition and the cheque case to improve; scale 0.5
+  got worse on val (K2) or did not move (K1), and K1 does not improve the cheque case. Code on
+  local branch `exp/capture-scale-pen-width` (c6cf778, 142 tests pass incl. 100-run determinism).
+* Why scale 0.5 does not move (dev, genuine pairs): queries that took the upscale route are
+  already near clean (mean logit +6.54) and matching leaves them there; 64% of genuine pairs
+  are never triggered (blur-inflated pen inside the band, mean logit +2.81). Matching raises
+  skilled logits almost as much as genuine (cheque +0.84 vs +0.95): mostly a calibration shift,
+  hence the operating-point gain with a small EER change. The matched partner also skips the
+  < 256 px upscale route its coarse counterpart took.
+* Next (dev only): route-consistent matching (the partner follows the coarse image's
+  preprocessing route); a blur-robust pen-width estimate to catch in-band 0.5x captures.
