@@ -86,7 +86,8 @@ class KeypointOverlayPlacementTest(unittest.TestCase):
         self.assertLessEqual(float(to_ink.max()), MAX_MARKER_TO_INK_PX,
                              f"markers off-stroke at {xy[to_ink > MAX_MARKER_TO_INK_PX].tolist()}")
         self.assertEqual(view.stats.keypoints, len(feats.keypoints))
-        self.assertGreaterEqual(view.stats.keypoints_off_stroke, 0)
+        # Both fixtures have loops whose interiors hold coarse-scale SIFT centres.
+        self.assertGreater(view.stats.keypoints_off_stroke, 0)
         self.assertLess(view.stats.keypoints_off_stroke, view.stats.keypoints)
 
     def test_markers_on_strokes_clean_background(self):
@@ -97,9 +98,10 @@ class KeypointOverlayPlacementTest(unittest.TestCase):
 
     def test_keypoints_used_for_matching_are_unchanged(self):
         image = clean_signature()
-        before = extract_features(image, self.params).keypoints.copy()
-        inspect_image(image, extract_features(image, self.params), None, self.params)
-        self.assertTrue(np.array_equal(extract_features(image, self.params).keypoints, before))
+        feats = extract_features(image, self.params)
+        before = feats.keypoints.copy()
+        inspect_image(image, feats, None, self.params)
+        self.assertTrue(np.array_equal(feats.keypoints, before))
 
 
 class OnStrokeKeypointsTest(unittest.TestCase):

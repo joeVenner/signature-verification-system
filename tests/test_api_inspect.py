@@ -112,6 +112,10 @@ class InspectEndpointTest(unittest.TestCase):
             self.assertIsNotNone(decoded)
             self.assertLessEqual(max(decoded.shape[:2]), 640)
 
+    def test_stroke_stats_report_off_stroke_keypoints(self):
+        for side in ("reference", "questioned"):
+            self.assertIsInstance(self.response.json()[side]["stats"]["keypoints_off_stroke"], int)
+
     def test_identical_to_compare_endpoint(self):
         for questioned in (self.que, self.other):
             body = {"reference_images": [self.ref], "questioned_image": questioned}

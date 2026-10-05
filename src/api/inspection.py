@@ -51,7 +51,7 @@ class StrokeStats(BaseModel):
     skeleton_points: int
     keypoints: int = Field(..., description="All SIFT keypoints used for matching")
     keypoints_off_stroke: int = Field(
-        0, description="Keypoints whose centre lies off the strokes (coarse-scale blobs); counted, not drawn")
+        ..., description="Keypoints whose centre lies off the strokes (coarse-scale blobs); counted, not drawn")
     stroke_width_px: float = Field(..., description="Mean pen width on the comparison canvas")
     ink_density: float
     aspect_ratio: float
