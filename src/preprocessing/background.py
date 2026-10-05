@@ -232,11 +232,15 @@ def prepare_signature(image: np.ndarray, gray: np.ndarray) -> PreparedSignature:
 
     Args:
         image: the input image (any channel layout accepted by the verifier).
-        gray: its uint8 grayscale view with dark ink (see normalization.ensure_dark_ink).
+        gray: uint8 grayscale view with dark ink derived from this exact
+            `image` (normalization.ensure_dark_ink(to_gray(image))); routing is
+            decided on `gray` but the untouched route returns `image`, so a
+            mismatched pair gives inconsistent results.
 
     Returns:
         PreparedSignature. For a clean image at least LOWRES_MAX_WIDTH wide both
-        images are `image` itself (same object).
+        images are `image` itself (same object). `work_image` may be upscaled
+        (sizes in `upscale` x input pixels); `gate_image` is at input resolution.
     """
     h, w = gray.shape[:2]
     if min(h, w) < MIN_SIDE_PX:
