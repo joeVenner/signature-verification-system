@@ -173,5 +173,48 @@ class TestQualityGateOnTexture(unittest.TestCase):
         self.assertTrue(result.quality["questioned"]["background_removed"])
 
 
+class TestTexturedRouteDeterminism(unittest.TestCase):
+    """The textured + upscaled route must be byte-identical in and across processes."""
+
+    SCRIPT = (
+        "import sys, cv2\n"
+        "from signature_verification_system.src.verification.signature_compare import compare_signatures\n"
+        "ref = cv2.imread(sys.argv[1]); q = cv2.imread(sys.argv[2])\n"
+        "sys.stdout.write(compare_signatures([ref], q).model_dump_json())\n"
+    )
+
+    def setUp(self):
+        self.reference = cv2.cvtColor(signature(textured=False, width=640, seed=1)[0], cv2.COLOR_GRAY2BGR)
+        self.questioned = cv2.cvtColor(signature(textured=True, width=208, seed=2)[0], cv2.COLOR_GRAY2BGR)
+
+    def test_repeated_runs_identical(self):
+        from signature_verification_system.src.verification.signature_compare import compare_signatures
+
+        outputs = {compare_signatures([self.reference], self.questioned).model_dump_json() for _ in range(20)}
+        self.assertEqual(len(outputs), 1)
+
+    def test_fresh_interpreters_match_in_process_result(self):
+        import os
+        import subprocess
+        import sys
+        import tempfile
+        from pathlib import Path
+
+        import signature_verification_system
+        from signature_verification_system.src.verification.signature_compare import compare_signatures
+
+        expected = compare_signatures([self.reference], self.questioned).model_dump_json()
+        package_dir = Path(list(signature_verification_system.__path__)[0])
+        env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(package_dir.parent), str(package_dir.resolve().parent)])}
+        with tempfile.TemporaryDirectory() as tmp:
+            ref_path, q_path = Path(tmp) / "ref.png", Path(tmp) / "q.png"
+            cv2.imwrite(str(ref_path), self.reference)
+            cv2.imwrite(str(q_path), self.questioned)
+            for _ in range(2):
+                out = subprocess.run([sys.executable, "-c", self.SCRIPT, str(ref_path), str(q_path)],
+                                     env=env, capture_output=True, text=True, check=True).stdout
+                self.assertEqual(out, expected)
+
+
 if __name__ == "__main__":
     unittest.main()
