@@ -37,6 +37,8 @@ from signature_verification_system.src.verification.similarity import (
 )
 from signature_verification_system.src.verification.explanation import build_explanation
 from signature_verification_system.src.adjudication.thresholds import ACCEPT, classify_band
+from signature_verification_system.src.preprocessing.background import PreparedSignature
+from signature_verification_system.src.preprocessing.normalization import prepare_image
 from signature_verification_system.src.preprocessing.quality import SignatureQuality, assess_signature_quality
 
 
@@ -65,6 +67,20 @@ def _best_signals(per_reference: List[dict]) -> dict:
 def _band_note(band: str) -> str:
     return _BAND_NOTES[band]
 
+
+
+def _prepare(image: Optional[np.ndarray]) -> Optional[PreparedSignature]:
+    """Background / resolution routing computed once per image for gate and features.
+
+    None (each consumer then prepares and handles the failure itself) for an
+    empty input or when preprocessing fails.
+    """
+    if image is None or image.size == 0 or min(image.shape[:2]) < 4:
+        return None
+    try:
+        return prepare_image(image)
+    except (cv2.error, MemoryError, ValueError):
+        return None
 
 class DeterministicVerifier:
     """Multi-feature deterministic signature verification engine."""
@@ -313,16 +329,17 @@ class DeterministicVerifier:
         Images without detectable ink return score 0.0 with an INCONCLUSIVE note
         instead of raising, so the API can surface a quality failure.
         """
-        q_ref = assess_signature_quality(reference_image)
-        q_que = assess_signature_quality(questioned_image)
+        p_ref, p_que = _prepare(reference_image), _prepare(questioned_image)
+        q_ref = assess_signature_quality(reference_image, p_ref)
+        q_que = assess_signature_quality(questioned_image, p_que)
         quality = {"questioned": q_que.model_dump(), "references": [q_ref.model_dump()]}
         if not q_que.passed:
             return self._inconclusive("questioned image quality too low (" + ", ".join(q_que.blocking_issues) + ")", quality)
         if not q_ref.passed:
             return self._inconclusive("reference specimen quality too low (" + ", ".join(q_ref.blocking_issues) + ")", quality)
         try:
-            ref_feat = extract_features(reference_image, self.config.representation)
-            que_feat = extract_features(questioned_image, self.config.representation)
+            ref_feat = extract_features(reference_image, self.config.representation, p_ref)
+            que_feat = extract_features(questioned_image, self.config.representation, p_que)
         except ValueError as exc:
             return self._inconclusive(str(exc), quality)
         result = self._result_from_features(ref_feat, que_feat)
@@ -346,21 +363,23 @@ class DeterministicVerifier:
         """
         if not reference_images:
             raise ValueError("At least one reference signature is required")
-        q_que = assess_signature_quality(questioned_image)
-        q_refs = [assess_signature_quality(img) for img in reference_images]
+        p_que = _prepare(questioned_image)
+        p_refs = [_prepare(img) for img in reference_images]
+        q_que = assess_signature_quality(questioned_image, p_que)
+        q_refs = [assess_signature_quality(img, p) for img, p in zip(reference_images, p_refs)]
         quality = {"questioned": q_que.model_dump(), "references": [q.model_dump() for q in q_refs]}
         if not q_que.passed:
             return self._inconclusive("questioned image quality too low (" + ", ".join(q_que.blocking_issues) + ")", quality)
         try:
-            que_feat = extract_features(questioned_image, self.config.representation)
+            que_feat = extract_features(questioned_image, self.config.representation, p_que)
         except ValueError as exc:
             return self._inconclusive(f"questioned image: {exc}", quality)
         ref_feats = []
-        for img, q in zip(reference_images, q_refs):
+        for img, p, q in zip(reference_images, p_refs, q_refs):
             if not q.passed:
                 continue
             try:
-                ref_feats.append(extract_features(img, self.config.representation))
+                ref_feats.append(extract_features(img, self.config.representation, p))
             except ValueError:
                 continue
         if not ref_feats:

@@ -12,12 +12,12 @@ data-dependent iteration order).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
 
-from signature_verification_system.src.preprocessing.background import prepare_signature
+from signature_verification_system.src.preprocessing.background import PreparedSignature, prepare_signature
 from signature_verification_system.src.preprocessing.isolation import isolate_signature_ink
 
 PAPER_CLOSE_KERNEL = 15     # px; larger than any stroke width in 256-900 px crops
@@ -124,12 +124,27 @@ def _flat_field_pass(gray: np.ndarray) -> np.ndarray:
     return np.round(255.0 * (1.0 - darkness)).astype(np.uint8)
 
 
-def normalize_signature(image: np.ndarray) -> NormalizedSignature:
+def prepare_image(image: np.ndarray) -> PreparedSignature:
+    """Background / resolution routing of an input image (see background.py).
+
+    Compute it once per image and pass it to `normalize_signature` and
+    `quality.assess_signature_quality` to avoid repeating the work.
+    """
+    return prepare_signature(image, ensure_dark_ink(to_gray(image))[0])
+
+
+def normalize_signature(image: np.ndarray, prepared: Optional[PreparedSignature] = None) -> NormalizedSignature:
     """Harmonise and tight-crop a signature image.
 
     Textured (cheque security) backgrounds are removed and small crops are
-    upscaled first (see background.py); `bbox` and `gray` then refer to that
-    prepared image.
+    upscaled first (see background.py). `bbox`, `gray` and `ink_pixel_count`
+    are therefore in the coordinates of the prepared (possibly upscaled)
+    image, whereas the quality gate reports sizes at input resolution.
+
+    Args:
+        image: input signature image.
+        prepared: `prepare_image(image)` if already computed (must come from
+            this exact image).
 
     Raises:
         ValueError: if the image is empty, unsupported, fails preprocessing or
@@ -139,7 +154,9 @@ def normalize_signature(image: np.ndarray) -> NormalizedSignature:
         raise ValueError("Empty signature image")
     gray, inverted = ensure_dark_ink(to_gray(image))
     try:
-        harmonized = harmonize_photometric(prepare_signature(image, gray).work_image)
+        if prepared is None:
+            prepared = prepare_signature(image, gray)
+        harmonized = harmonize_photometric(prepared.work_image)
     except cv2.error as exc:
         # ValueError is the verifier's INCONCLUSIVE path; the OpenCV message stays out of responses.
         raise ValueError("Image preprocessing failed") from exc

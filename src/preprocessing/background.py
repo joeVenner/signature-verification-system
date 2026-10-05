@@ -30,7 +30,7 @@ raster-order labels; no randomness.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -107,7 +107,7 @@ def _odd(x: float) -> int:
     return n if n % 2 else n + 1
 
 
-def paper_kernel(shape: tuple) -> int:
+def paper_kernel(shape: Tuple[int, ...]) -> int:
     """Closing kernel (odd px) for the paper estimate of an image of this shape."""
     return _odd(np.clip(PAPER_KERNEL_FRAC * min(shape[:2]), PAPER_KERNEL_MIN_PX, PAPER_KERNEL_MAX_PX))
 
@@ -131,20 +131,38 @@ def _background_mask(darkness: np.ndarray, ink_level: float) -> np.ndarray:
     return cv2.dilate(strong, se) == 0
 
 
+@dataclass(frozen=True)
+class _DarknessAnalysis:
+    """Darkness map plus the ink level and background mask derived from it."""
+
+    darkness: np.ndarray
+    ink_level: float
+    background: np.ndarray
+
+
+def _analyse(gray: np.ndarray) -> _DarknessAnalysis:
+    darkness = darkness_map(gray, paper_kernel(gray.shape))
+    ink_level = float(np.quantile(darkness, INK_QUANTILE))
+    return _DarknessAnalysis(darkness, ink_level, _background_mask(darkness, ink_level))
+
+
+def _texture_report(analysis: _DarknessAnalysis) -> TextureReport:
+    background = analysis.background
+    if int(background.sum()) < MIN_BACKGROUND_PX:
+        return TextureReport(0.0, analysis.ink_level, False)
+    threshold = max(TEXTURE_MIN_DARKNESS, TEXTURE_REL_DARKNESS * analysis.ink_level)
+    fraction = float(np.mean(analysis.darkness[background] > threshold))
+    # The routing decision uses the exact fraction; only the reported value is rounded.
+    return TextureReport(round(fraction, 6), round(analysis.ink_level, 6), fraction >= TEXTURED_MIN_FRACTION)
+
+
 def measure_background_texture(gray: np.ndarray) -> TextureReport:
     """Detect a textured (guilloche / pattern) background.
 
     Args:
         gray: uint8 grayscale image with dark ink on light paper.
     """
-    darkness = darkness_map(gray, paper_kernel(gray.shape))
-    ink_level = float(np.quantile(darkness, INK_QUANTILE))
-    background = _background_mask(darkness, ink_level)
-    if int(background.sum()) < MIN_BACKGROUND_PX:
-        return TextureReport(0.0, ink_level, False)
-    threshold = max(TEXTURE_MIN_DARKNESS, TEXTURE_REL_DARKNESS * ink_level)
-    fraction = float(np.mean(darkness[background] > threshold))
-    return TextureReport(round(fraction, 6), round(ink_level, 6), fraction >= TEXTURED_MIN_FRACTION)
+    return _texture_report(_analyse(gray))
 
 
 def _is_signature_like(mask: np.ndarray) -> bool:
@@ -155,20 +173,20 @@ def _is_signature_like(mask: np.ndarray) -> bool:
     return float(areas[:TOP_COMPONENTS].sum()) >= MIN_TOP_COMPONENT_SHARE * float(areas.sum())
 
 
-def extract_ink_layer(gray: np.ndarray) -> Optional[np.ndarray]:
+def extract_ink_layer(gray: np.ndarray, analysis: Optional[_DarknessAnalysis] = None) -> Optional[np.ndarray]:
     """Separate signature ink from a textured background.
 
     Args:
         gray: uint8 grayscale image with dark ink on light paper.
+        analysis: `_analyse(gray)` if the caller already has it.
 
     Returns:
         uint8 image of the same shape: paper = 255, ink pixels keep their
         darkness relative to the paper. None when no signature-like ink is
         clearly darker than the texture (the caller must not trust the image).
     """
-    darkness = darkness_map(gray, paper_kernel(gray.shape))
-    ink_level = float(np.quantile(darkness, INK_QUANTILE))
-    background = _background_mask(darkness, ink_level)
+    a = analysis if analysis is not None else _analyse(gray)
+    darkness, ink_level, background = a.darkness, a.ink_level, a.background
     if int(background.sum()) < MIN_BACKGROUND_PX:
         return None
     level = float(np.quantile(darkness[background], TEXTURE_LEVEL_QUANTILE))
@@ -218,13 +236,17 @@ def prepare_signature(image: np.ndarray, gray: np.ndarray) -> PreparedSignature:
     if max(h, w) > MAX_ASPECT_RATIO * min(h, w):
         return PreparedSignature(image, image, TextureReport(0.0, 0.0, False), 1.0, False, True,
                                  dimensions_supported=False)
-    texture = measure_background_texture(gray)
+    analysis = _analyse(gray)
+    texture = _texture_report(analysis)
     scale = upscale_factor(h, w)
     if not texture.is_textured:
         work = image if scale == 1.0 else _upscale(image, scale)
         return PreparedSignature(work, image, texture, scale, False, True)
-    work_gray = gray if scale == 1.0 else _upscale(gray, scale)
-    extracted = extract_ink_layer(work_gray)
+    if scale == 1.0:
+        work_gray, extracted = gray, extract_ink_layer(gray, analysis)
+    else:
+        work_gray = _upscale(gray, scale)
+        extracted = extract_ink_layer(work_gray)
     if extracted is None:
         return PreparedSignature(work_gray, gray, texture, scale, False, False)
     gate = extracted if scale == 1.0 else cv2.resize(extracted, (w, h), interpolation=cv2.INTER_AREA)

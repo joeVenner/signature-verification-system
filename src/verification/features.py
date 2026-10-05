@@ -25,6 +25,7 @@ import numpy as np
 
 from signature_verification_system.src.core.config import DEFAULT_CONFIG, RepresentationParams
 from signature_verification_system.src.core.determinism import configure_determinism
+from signature_verification_system.src.preprocessing.background import PreparedSignature
 from signature_verification_system.src.preprocessing.normalization import (
     NormalizedSignature,
     canonicalize,
@@ -88,10 +89,17 @@ def keypoint_descriptors(ink: np.ndarray, width: int, height: int) -> tuple[np.n
     return pts[order], des[order]
 
 
-def extract_features(image: np.ndarray, params: Optional[RepresentationParams] = None) -> SignatureFeatures:
-    """Extract all descriptors for one signature image (raises ValueError if no ink)."""
+def extract_features(
+    image: np.ndarray,
+    params: Optional[RepresentationParams] = None,
+    prepared: Optional[PreparedSignature] = None,
+) -> SignatureFeatures:
+    """Extract all descriptors for one signature image (raises ValueError if no ink).
+
+    `prepared` is `normalization.prepare_image(image)` if already computed.
+    """
     p = params or DEFAULT_CONFIG.representation
-    norm = normalize_signature(image)
+    norm = normalize_signature(image, prepared)
     shape_canvas = canonicalize(norm.ink, p.shape_canvas_width, p.shape_canvas_height, keep_aspect=False)
     shape = gradient_grid_descriptor(shape_canvas, p.shape_grid_rows, p.shape_grid_cols, p.shape_bins, p.shape_blur_sigma)
     pts, des = keypoint_descriptors(norm.ink, p.keypoint_canvas_width, p.keypoint_canvas_height)

@@ -18,7 +18,7 @@ import cv2
 import numpy as np
 from pydantic import BaseModel, Field
 
-from signature_verification_system.src.preprocessing.background import prepare_signature
+from signature_verification_system.src.preprocessing.background import PreparedSignature, prepare_signature
 from signature_verification_system.src.preprocessing.normalization import ensure_dark_ink, to_gray
 
 # Thresholds (clean-data minimum / maximum in brackets, 70 CEDAR images)
@@ -60,7 +60,7 @@ def _blocked(issue: str, inverted: bool = False) -> SignatureQuality:
     )
 
 
-def assess_signature_quality(image: Optional[np.ndarray]) -> SignatureQuality:
+def assess_signature_quality(image: Optional[np.ndarray], prepared: Optional[PreparedSignature] = None) -> SignatureQuality:
     """Measure quality signals and apply the gate. Deterministic; never raises.
 
     On a textured (cheque security) background the signals are measured on the
@@ -68,11 +68,14 @@ def assess_signature_quality(image: Optional[np.ndarray]) -> SignatureQuality:
     noise; edge sharpness stays on the input because extraction redraws the
     stroke boundaries and would hide blur. If the texture is detected but no
     signature can be separated from it the image is blocked.
+
+    `prepared` is `normalization.prepare_image(image)` if already computed
+    (it must come from this exact image).
     """
     if image is None or image.size == 0 or min(image.shape[:2]) < 4:
         return _blocked("EMPTY_OR_INVALID_IMAGE")
     try:
-        return _measure(image)
+        return _measure(image, prepared)
     except (cv2.error, MemoryError, ValueError):
         # Unsupported layouts / dtypes or an OpenCV failure must make the
         # verification INCONCLUSIVE, never an API error. Details go to the log only.
@@ -80,10 +83,11 @@ def assess_signature_quality(image: Optional[np.ndarray]) -> SignatureQuality:
         return _blocked("PREPROCESSING_FAILED")
 
 
-def _measure(image: np.ndarray) -> SignatureQuality:
+def _measure(image: np.ndarray, prepared: Optional[PreparedSignature]) -> SignatureQuality:
     """Quality signals for a non-empty image (may raise on unsupported input)."""
     input_u8, inverted = ensure_dark_ink(to_gray(image))
-    prepared = prepare_signature(image, input_u8)
+    if prepared is None:
+        prepared = prepare_signature(image, input_u8)
     if not prepared.dimensions_supported:
         return _blocked("IMAGE_DIMENSIONS_UNSUPPORTED", inverted)
     gray_u8 = to_gray(prepared.gate_image) if prepared.background_removed else input_u8
