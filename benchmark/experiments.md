@@ -1337,9 +1337,11 @@ differences below ~2 EER points are within noise.
   smoothing add a floor): genuine canvas width ratio vs clean, median 1.32 (0.5x), 0.83 (2x),
   1.24 (cheque). Oracle (clean values substituted): curvature alone 13.80 -> 11.05 (0.5x),
   12.10 -> 9.59 (cheque); stroke_width alone 13.80 -> 12.26; both 10.44.
-* L-002 hypothesis (overall size is identity evidence) confirmed: on clean dev the size-ratio
-  signal has skilled AUC 0.689 / random 0.849, and stroke_width correlates 0.67 with it. The
-  ink radius-of-gyration trigger cannot separate capture from writer.
+* L-002 hypothesis (overall size is identity evidence) supported, correlational only: on clean
+  dev the size-ratio signal has skilled AUC 0.689 / random 0.849, and stroke_width correlates
+  0.67 with it; L-002's clean loss was not attributed to it directly. The pen-width ratio has
+  clean skilled AUC 0.79 but was never tested as a scan-session shortcut, so it is used only
+  as a trigger, never fused.
 * Capture cue: mean pen width in source px (skeleton x distance transform on the normalised
   ink, divided by the low-res upscale). Clean dev 3.94-6.58 px (genuine and forgeries), every
   other capture condition 3.85-6.88; scale 2.0 6.2-9.9; cheque 1.4-4.4; scale 0.5 split: the
@@ -1364,7 +1366,8 @@ differences below ~2 EER points are within noise.
 * Val, scored once (K2): clearance **5.255 -> 5.301** (D 0.622, R 0.462 -> 0.477, O 0.461), clean
   sha256 identical, skilled MATCH 0.15% (unchanged). scale 2.0 EER 17.2% -> **12.1%** (genuine
   NOMATCH 17.2% -> 6.4%); scale 0.5 16.7% -> **17.7%** (genuine NOMATCH 13.8% -> 13.2%); the other
-  nine conditions bit-identical. K1 alone, derived exactly from the same runs: 5.311.
+  nine conditions bit-identical. K1 alone, derived from the same runs: 5.311 (assumes the pair
+  step never fires on val scale 2.0, as on dev where the trigger rate is 0.00).
 * Cheque composites, val (refs clean), off -> K2: score 1.85 -> 2.31, mixed skilled / random EER
   23.8 / 12.5% -> 22.8 / 10.4%, genuine MATCH 9.9 -> 15.3%, NOMATCH 30.3 -> 24.5%, skilled MATCH
   0.1 -> 0.0%; clean_lowres EER 15.4 -> 15.2% (genuine MATCH 16.7 -> 28.4%, NOMATCH 11.6 -> 7.4%);
@@ -1380,5 +1383,8 @@ differences below ~2 EER points are within noise.
   skilled logits almost as much as genuine (cheque +0.84 vs +0.95): mostly a calibration shift,
   hence the operating-point gain with a small EER change. The matched partner also skips the
   < 256 px upscale route its coarse counterpart took.
-* Next (dev only): route-consistent matching (the partner follows the coarse image's
-  preprocessing route); a blur-robust pen-width estimate to catch in-band 0.5x captures.
+* Next (dev only): (1) scale 0.5 is a detection problem: a blur-robust pen-width estimate to
+  catch 0.5x captures that measure inside the band; (2) cheque only: route-consistent matching
+  (the partner follows the coarse image's < 256 px upscale route).
+* All EXP-026 numbers were measured on base 0bd2bc9, before the parent's review fixes (sparse-ink
+  fallback, upscale cap); the exp branch must be re-measured after porting.
