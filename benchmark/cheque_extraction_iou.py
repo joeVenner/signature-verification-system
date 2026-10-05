@@ -26,6 +26,7 @@ from typing import Dict, Iterator, List, Optional, Sequence, Tuple
 import cv2
 import numpy as np
 
+from signature_verification_system.benchmark.cheque_composite import bcsd_mask_path
 from signature_verification_system.src.preprocessing.background import prepare_signature
 from signature_verification_system.src.preprocessing.isolation import isolate_signature_ink
 from signature_verification_system.src.preprocessing.normalization import (
@@ -39,10 +40,12 @@ def bcsd_crops(bcsd_dir: Path, width: Optional[int]) -> Iterator[Tuple[str, np.n
     """(name, BGR crop, bool GT mask) per cheque, sorted by path."""
     for xp in sorted(bcsd_dir.glob("*/X/*.jpeg")):
         img = cv2.imread(str(xp))
-        gt = cv2.imread(str(xp).replace("/X/X_", "/y/y_"), cv2.IMREAD_GRAYSCALE)
+        gt = cv2.imread(str(bcsd_mask_path(xp)), cv2.IMREAD_GRAYSCALE)
         if img is None or gt is None:
             continue
         m = gt > 127
+        if not m.any():
+            continue
         ys, xs = np.nonzero(m)
         mh, mw = int(ys.max() - ys.min()), int(xs.max() - xs.min())
         y0, y1 = max(0, int(ys.min()) - mh // 5), int(ys.max()) + mh // 5
@@ -116,6 +119,8 @@ def run(bcsd_dir: Path, qa_dir: Optional[Path]) -> Dict[str, object]:
             rows.append({"name": name, "routed": routed, "iou_before": ib, "iou_after": ia, "f1_before": fb, "f1_after": fa})
             if qa_dir is not None and routed and len(panels) < 8:
                 panels.append(_qa_panel(crop, gt, before, after, work))
+        if not rows:
+            raise FileNotFoundError(f"No BCSD image / mask pairs under {bcsd_dir}")
         out[label] = {split: _summary([r for r in rows if r["name"].startswith(split)]) for split in ("TrainSet", "TestSet")}
         out[label]["per_image"] = rows
         if qa_dir is not None and panels:

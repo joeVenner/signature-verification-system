@@ -106,16 +106,23 @@ def guilloche_tint(h: int, w: int, scale: float, rng: np.random.Generator) -> np
     return np.clip(paper * (1.0 - a) + line_colour * a, 0, 255)
 
 
+def bcsd_mask_path(image_path: Path) -> Path:
+    """BCSD pairs <split>/X/X_nnn.jpeg with <split>/y/y_nnn.jpeg."""
+    return image_path.parent.parent / "y" / image_path.name.replace("X_", "y_", 1)
+
+
 @lru_cache(maxsize=1)
 def _bcsd_backgrounds(bcsd_dir: str) -> Tuple[np.ndarray, ...]:
     """Signature regions of every BCSD cheque with the signature inpainted out (sorted)."""
     out = []
     for xp in sorted(Path(bcsd_dir).glob("*/X/*.jpeg")):
         img = cv2.imread(str(xp))
-        mask = cv2.imread(str(xp).replace("/X/X_", "/y/y_"), cv2.IMREAD_GRAYSCALE)
+        mask = cv2.imread(str(bcsd_mask_path(xp)), cv2.IMREAD_GRAYSCALE)
         if img is None or mask is None:
             continue
         m = (mask > 127).astype(np.uint8)
+        if not m.any():
+            continue
         ys, xs = np.nonzero(m)
         y0, y1 = max(0, ys.min() - 20), min(m.shape[0], ys.max() + 20)
         x0, x1 = max(0, xs.min() - 20), min(m.shape[1], xs.max() + 20)
@@ -173,13 +180,20 @@ def composite(signature_bgr: np.ndarray, image_id: str, variant: str, bcsd_dir: 
 
 
 def _composite_path(cache_dir: Path, variant: str, image_id: str) -> Path:
-    return cache_dir / variant / f"{image_id}.png"
+    """Composite location; refuses any path that would resolve outside `cache_dir`."""
+    path = (cache_dir / variant / f"{image_id}.png").resolve()
+    if not path.is_relative_to(cache_dir.resolve()):
+        raise ValueError(f"Composite path escapes the cache dir: {path}")
+    return path
 
 
 def build(data_dir: Path, cache_dir: Path, bcsd_dir: str) -> int:
     """Write every composite (all images x all variants) under `cache_dir`."""
     n = 0
-    for s in load_images(data_dir):
+    images = load_images(data_dir)
+    if not images:
+        raise FileNotFoundError(f"No images under {data_dir}")
+    for s in images:
         img = cv2.imread(s.path, cv2.IMREAD_COLOR)
         if img is None:
             raise FileNotFoundError(s.path)
