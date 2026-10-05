@@ -12,9 +12,11 @@ import numpy as np
 from signature_verification_system.src.preprocessing.background import (
     LOWRES_MAX_WIDTH,
     LOWRES_TARGET_WIDTH,
+    MAX_WORK_PIXELS,
     extract_ink_layer,
     measure_background_texture,
     prepare_signature,
+    upscale_factor,
 )
 from signature_verification_system.src.preprocessing.isolation import isolate_signature_ink
 from signature_verification_system.src.preprocessing.normalization import INK_MASK_LEVEL, harmonize_photometric
@@ -139,6 +141,31 @@ class TestRouting(unittest.TestCase):
         self.assertEqual(prepared.work_image.shape[1], LOWRES_TARGET_WIDTH)
         self.assertIs(prepared.gate_image, img)
         self.assertFalse(prepared.background_removed)
+
+
+class TestDimensionLimits(unittest.TestCase):
+    def test_extreme_aspect_ratio_is_not_upscaled_and_is_blocked_fast(self):
+        import time
+
+        img = np.full((16, 400_000), 240, np.uint8)
+        img[4:12, 1000:5000] = 30
+        start = time.perf_counter()
+        prepared = prepare_signature(img, img)
+        q = assess_signature_quality(img)
+        elapsed = time.perf_counter() - start
+        self.assertFalse(prepared.dimensions_supported)
+        self.assertIs(prepared.work_image, img)
+        self.assertEqual(prepared.upscale, 1.0)
+        self.assertFalse(q.passed)
+        self.assertEqual(q.blocking_issues, ["IMAGE_DIMENSIONS_UNSUPPORTED"])
+        self.assertLess(elapsed, 2.0)
+
+    def test_upscale_never_exceeds_the_work_pixel_cap(self):
+        for h, w in ((16, 255), (300, 255), (4000, 250), (16, 3_000_000)):
+            scale = upscale_factor(h, w)
+            self.assertLessEqual(h * w * scale * scale, max(MAX_WORK_PIXELS, h * w))
+        self.assertEqual(upscale_factor(4000, 250), 1.0)
+        self.assertEqual(upscale_factor(100, 200), LOWRES_TARGET_WIDTH / 200)
 
 
 class TestQualityGateOnTexture(unittest.TestCase):

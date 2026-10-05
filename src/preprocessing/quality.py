@@ -48,6 +48,14 @@ class SignatureQuality(BaseModel):
     warnings: List[str] = Field(default_factory=list)
 
 
+def _blocked(issue: str, inverted: bool = False) -> SignatureQuality:
+    """Gate result for an image that is rejected before any signal is measured."""
+    return SignatureQuality(
+        passed=False, ink_contrast=0.0, edge_sharpness=0.0, noise_ratio=0.0, ink_pixels=0,
+        signature_width=0, signature_height=0, polarity_inverted=inverted, blocking_issues=[issue],
+    )
+
+
 def assess_signature_quality(image: Optional[np.ndarray]) -> SignatureQuality:
     """Measure quality signals and apply the gate. Deterministic; never raises.
 
@@ -58,13 +66,11 @@ def assess_signature_quality(image: Optional[np.ndarray]) -> SignatureQuality:
     signature can be separated from it the image is blocked.
     """
     if image is None or image.size == 0 or min(image.shape[:2]) < 4:
-        return SignatureQuality(
-            passed=False, ink_contrast=0.0, edge_sharpness=0.0, noise_ratio=0.0, ink_pixels=0,
-            signature_width=0, signature_height=0, polarity_inverted=False,
-            blocking_issues=["EMPTY_OR_INVALID_IMAGE"],
-        )
+        return _blocked("EMPTY_OR_INVALID_IMAGE")
     input_u8, inverted = ensure_dark_ink(to_gray(image))
     prepared = prepare_signature(image, input_u8)
+    if not prepared.dimensions_supported:
+        return _blocked("IMAGE_DIMENSIONS_UNSUPPORTED", inverted)
     gray_u8 = to_gray(prepared.gate_image) if prepared.background_removed else input_u8
     gray = gray_u8.astype(np.float64)
     paper = float(np.median(gray))

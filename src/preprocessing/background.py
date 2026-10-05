@@ -71,7 +71,13 @@ MAX_INK_COVERAGE = 0.35
 # take it; cheque field crops (~200 px) always do.
 LOWRES_MAX_WIDTH = 256
 LOWRES_TARGET_WIDTH = 512
+# Upscaled images never exceed this many pixels (a 16 x 3,000,000 input would
+# otherwise become ~49 Gpx); larger results keep scale 1.0.
+MAX_WORK_PIXELS = 4_000_000
 MIN_SIDE_PX = 16               # smaller inputs are left to the quality gate
+# Longest / shortest side. Real crops: BCSD max 6.3 (signature boxes 7.2),
+# CEDAR max 4.1. Beyond this the image is not processed (gate blocks it).
+MAX_ASPECT_RATIO = 20.0
 
 
 @dataclass(frozen=True)
@@ -93,6 +99,7 @@ class PreparedSignature:
     upscale: float                 # work / input linear scale (1.0 = unchanged)
     background_removed: bool       # textured route applied
     separable: bool                # False: textured, but no signature could be separated
+    dimensions_supported: bool = True  # False: aspect ratio above MAX_ASPECT_RATIO, nothing done
 
 
 def _odd(x: float) -> int:
@@ -179,6 +186,16 @@ def extract_ink_layer(gray: np.ndarray) -> Optional[np.ndarray]:
     return np.round(255.0 * (1.0 - np.where(mask, darkness, 0.0))).astype(np.uint8)
 
 
+def upscale_factor(h: int, w: int) -> float:
+    """Linear upscale for a low-resolution crop; 1.0 if wide enough or the result would be too large."""
+    if w >= LOWRES_MAX_WIDTH:
+        return 1.0
+    scale = LOWRES_TARGET_WIDTH / float(w)
+    if h * w * scale * scale > MAX_WORK_PIXELS:
+        return 1.0
+    return scale
+
+
 def _upscale(image: np.ndarray, scale: float) -> np.ndarray:
     h, w = image.shape[:2]
     return cv2.resize(image, (int(round(w * scale)), int(round(h * scale))), interpolation=cv2.INTER_CUBIC)
@@ -198,8 +215,11 @@ def prepare_signature(image: np.ndarray, gray: np.ndarray) -> PreparedSignature:
     h, w = gray.shape[:2]
     if min(h, w) < MIN_SIDE_PX:
         return PreparedSignature(image, image, TextureReport(0.0, 0.0, False), 1.0, False, True)
+    if max(h, w) > MAX_ASPECT_RATIO * min(h, w):
+        return PreparedSignature(image, image, TextureReport(0.0, 0.0, False), 1.0, False, True,
+                                 dimensions_supported=False)
     texture = measure_background_texture(gray)
-    scale = LOWRES_TARGET_WIDTH / float(w) if w < LOWRES_MAX_WIDTH else 1.0
+    scale = upscale_factor(h, w)
     if not texture.is_textured:
         work = image if scale == 1.0 else _upscale(image, scale)
         return PreparedSignature(work, image, texture, scale, False, True)
