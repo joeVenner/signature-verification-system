@@ -156,6 +156,9 @@ def normalize_signature(image: np.ndarray, prepared: Optional[PreparedSignature]
     try:
         if prepared is None:
             prepared = prepare_signature(image, gray)
+        if not prepared.dimensions_supported:
+            # Extreme aspect ratios make every later stage pathologically slow.
+            raise ValueError("Unsupported image dimensions")
         harmonized = harmonize_photometric(prepared.work_image)
     except cv2.error as exc:
         # ValueError is the verifier's INCONCLUSIVE path; the OpenCV message stays out of responses.

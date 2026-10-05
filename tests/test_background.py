@@ -166,6 +166,16 @@ class TestDimensionLimits(unittest.TestCase):
         self.assertEqual(q.blocking_issues, ["IMAGE_DIMENSIONS_UNSUPPORTED"])
         self.assertLess(elapsed, 2.0)
 
+    def test_normalisation_refuses_extreme_aspect_ratio_fast(self):
+        import time
+
+        img = np.full((16, 400_000), 240, np.uint8)
+        img[4:12, 1000:5000] = 30
+        start = time.perf_counter()
+        with self.assertRaisesRegex(ValueError, "Unsupported image dimensions"):
+            normalize_signature(img)
+        self.assertLess(time.perf_counter() - start, 2.0)
+
     def test_upscale_never_exceeds_the_work_pixel_cap(self):
         for h, w in ((16, 255), (300, 255), (4000, 250), (16, 3_000_000)):
             scale = upscale_factor(h, w)
