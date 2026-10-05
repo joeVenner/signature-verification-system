@@ -19,7 +19,8 @@ from pydantic import BaseModel, Field
 
 from signature_verification_system.src.api import visuals
 from signature_verification_system.src.core.config import FUSION_SIGNALS
-from signature_verification_system.src.verification.deterministic import DeterministicVerifier
+from signature_verification_system.src.preprocessing.quality import assess_signature_quality
+from signature_verification_system.src.verification.deterministic import DeterministicVerifier, prepare_or_none
 from signature_verification_system.src.verification.features import SignatureFeatures, extract_features
 from signature_verification_system.src.verification.signature_compare import (
     SCORE_ACCEPT_ANCHOR,
@@ -33,6 +34,7 @@ from signature_verification_system.src.verification.similarity import PairSimila
 LOG_ODDS_DECIMALS = 6   # precision of SignatureComparison.log_odds
 SUM_TOLERANCE = 1e-9
 EXTRACTION_FAILED_MESSAGE = "No signature could be isolated in this image."
+QUALITY_BLOCKED_MESSAGE = "Image did not pass the signature quality gate; no intermediates were computed."
 
 LOGGER = logging.getLogger(__name__)
 
@@ -138,8 +140,12 @@ class SignatureInspection(BaseModel):
 
 
 def _features_or_error(image: np.ndarray, verifier: DeterministicVerifier) -> tuple[Optional[SignatureFeatures], Optional[str]]:
+    """Features for the visuals, only for images the quality gate lets through (same rule as verify)."""
+    prepared = prepare_or_none(image)
+    if not assess_signature_quality(image, prepared).passed:
+        return None, QUALITY_BLOCKED_MESSAGE
     try:
-        return extract_features(image, verifier.config.representation), None
+        return extract_features(image, verifier.config.representation, prepared), None
     except ValueError:
         # The exception text is logged, never returned: a future message could expose internals.
         LOGGER.info("feature extraction failed during inspect", exc_info=True)

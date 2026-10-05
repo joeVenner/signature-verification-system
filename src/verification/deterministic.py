@@ -68,8 +68,7 @@ def _band_note(band: str) -> str:
     return _BAND_NOTES[band]
 
 
-
-def _prepare(image: Optional[np.ndarray]) -> Optional[PreparedSignature]:
+def prepare_or_none(image: Optional[np.ndarray]) -> Optional[PreparedSignature]:
     """Background / resolution routing computed once per image for gate and features.
 
     None (each consumer then prepares and handles the failure itself) for an
@@ -81,6 +80,7 @@ def _prepare(image: Optional[np.ndarray]) -> Optional[PreparedSignature]:
         return prepare_image(image)
     except (cv2.error, MemoryError, ValueError):
         return None
+
 
 class DeterministicVerifier:
     """Multi-feature deterministic signature verification engine."""
@@ -329,7 +329,7 @@ class DeterministicVerifier:
         Images without detectable ink return score 0.0 with an INCONCLUSIVE note
         instead of raising, so the API can surface a quality failure.
         """
-        p_ref, p_que = _prepare(reference_image), _prepare(questioned_image)
+        p_ref, p_que = prepare_or_none(reference_image), prepare_or_none(questioned_image)
         q_ref = assess_signature_quality(reference_image, p_ref)
         q_que = assess_signature_quality(questioned_image, p_que)
         quality = {"questioned": q_que.model_dump(), "references": [q_ref.model_dump()]}
@@ -363,8 +363,8 @@ class DeterministicVerifier:
         """
         if not reference_images:
             raise ValueError("At least one reference signature is required")
-        p_que = _prepare(questioned_image)
-        p_refs = [_prepare(img) for img in reference_images]
+        p_que = prepare_or_none(questioned_image)
+        p_refs = [prepare_or_none(img) for img in reference_images]
         q_que = assess_signature_quality(questioned_image, p_que)
         q_refs = [assess_signature_quality(img, p) for img, p in zip(reference_images, p_refs)]
         quality = {"questioned": q_que.model_dump(), "references": [q.model_dump() for q in q_refs]}

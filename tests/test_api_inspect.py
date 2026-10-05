@@ -222,5 +222,27 @@ class SamplesEndpointTest(unittest.TestCase):
         self.assertIsNone(load_catalog(None))
 
 
+
+class InspectQualityGateTest(unittest.TestCase):
+    """/inspect must not run feature extraction on images the quality gate blocks."""
+
+    def test_over_aspect_image_returns_promptly_without_extraction(self):
+        import time
+
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.verification.deterministic import DeterministicVerifier
+
+        wide = np.full((16, 400_000, 3), 240, np.uint8)
+        wide[4:12, 1000:5000] = 30
+        reference = synthetic_signature(1)
+        start = time.perf_counter()
+        with unittest.mock.patch.object(inspection, "extract_features", wraps=inspection.extract_features) as spy:
+            result = inspection.inspect_signatures(reference, wide, DeterministicVerifier())
+        self.assertLess(time.perf_counter() - start, 20.0)
+        self.assertEqual(result.comparison.band, "INCONCLUSIVE")
+        self.assertEqual(result.questioned.error, inspection.QUALITY_BLOCKED_MESSAGE)
+        self.assertIsNone(result.questioned.harmonised_png)
+        self.assertEqual(spy.call_count, 1)        # the reference only
+
 if __name__ == "__main__":
     unittest.main()
