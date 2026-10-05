@@ -41,6 +41,12 @@ PAPER_KERNEL_FRAC = 0.12
 PAPER_KERNEL_MIN_PX = 7
 PAPER_KERNEL_MAX_PX = 31
 INK_QUANTILE = 0.99            # darkness quantile taken as the ink level
+# A small signature in a large crop covers < 1% of it, so q99 falls on the
+# texture. When q99.9 is far above q99 the ink is sparse and q99.9 is used.
+# EXP-025: q99.9 / q99 <= 1.66 on every composite and clean image, 2.1 with
+# ink covering 0.4-0.7% of a guilloche crop.
+SPARSE_INK_QUANTILE = 0.999
+SPARSE_INK_RATIO = 1.8
 STRONG_INK_FRAC = 0.5          # darkness above this share of the ink level is ink core
 NEAR_INK_PX = 3                # anti-aliased halo around ink excluded from the background
 MIN_BACKGROUND_PX = 50
@@ -142,7 +148,9 @@ class _DarknessAnalysis:
 
 def _analyse(gray: np.ndarray) -> _DarknessAnalysis:
     darkness = darkness_map(gray, paper_kernel(gray.shape))
-    ink_level = float(np.quantile(darkness, INK_QUANTILE))
+    ink_level, sparse_level = (float(v) for v in np.quantile(darkness, [INK_QUANTILE, SPARSE_INK_QUANTILE]))
+    if sparse_level > SPARSE_INK_RATIO * ink_level:
+        ink_level = sparse_level
     return _DarknessAnalysis(darkness, ink_level, _background_mask(darkness, ink_level))
 
 

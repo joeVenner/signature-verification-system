@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 
 from signature_verification_system.src.preprocessing.background import (
+    TEXTURED_MIN_FRACTION,
     LOWRES_MAX_WIDTH,
     LOWRES_TARGET_WIDTH,
     MAX_WORK_PIXELS,
@@ -19,7 +20,11 @@ from signature_verification_system.src.preprocessing.background import (
     upscale_factor,
 )
 from signature_verification_system.src.preprocessing.isolation import isolate_signature_ink
-from signature_verification_system.src.preprocessing.normalization import INK_MASK_LEVEL, harmonize_photometric
+from signature_verification_system.src.preprocessing.normalization import (
+    INK_MASK_LEVEL,
+    harmonize_photometric,
+    normalize_signature,
+)
 from signature_verification_system.src.preprocessing.quality import assess_signature_quality
 from signature_verification_system.src.verification.deterministic import DeterministicVerifier
 
@@ -90,7 +95,8 @@ class TestTextureDetector(unittest.TestCase):
         self.assertFalse(measure_background_texture(ruled).is_textured)
 
     def test_extracted_layer_is_not_textured_again(self):
-        prepared = prepare_signature(*(lambda i: (i, i))(signature(True, 208)[0]))
+        img = signature(True, 208)[0]
+        prepared = prepare_signature(img, img)
         self.assertTrue(prepared.background_removed)
         self.assertFalse(measure_background_texture(prepared.work_image).is_textured)
 
@@ -166,6 +172,69 @@ class TestDimensionLimits(unittest.TestCase):
             self.assertLessEqual(h * w * scale * scale, max(MAX_WORK_PIXELS, h * w))
         self.assertEqual(upscale_factor(4000, 250), 1.0)
         self.assertEqual(upscale_factor(100, 200), LOWRES_TARGET_WIDTH / 200)
+
+
+def sparse_signature(scale: float) -> tuple:
+    """Signature shrunk by `scale` in the top-left of a full guilloche crop (640 px)."""
+    small = cv2.resize(_strokes(), None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    a = np.zeros((CANVAS_H, CANVAS_W))
+    a[10:10 + small.shape[0], 20:20 + small.shape[1]] = small
+    img = _capture(_guilloche() * (1.0 - a) + INK * a, CANVAS_W, 0)
+    return img, a > 0.5
+
+
+class TestEdgeCases(unittest.TestCase):
+    def test_sparse_ink_is_still_routed(self):
+        img, gt = sparse_signature(0.25)
+        self.assertLess(float(gt.mean()), 0.01)          # ink covers < 1% of the crop
+        prepared = prepare_signature(img, img)
+        self.assertTrue(prepared.texture.is_textured)
+        self.assertTrue(prepared.background_removed)
+        self.assertGreaterEqual(iou(verifier_ink_mask(prepared.work_image), gt), 0.6)
+
+    def test_tiny_images_do_not_raise(self):
+        for h, w in ((4, 4), (4, 300), (15, 15), (15, 300), (300, 15)):
+            img = np.full((h, w), 240, np.uint8)
+            img[h // 2, :] = 20
+            prepared = prepare_signature(img, img)
+            self.assertIs(prepared.work_image, img)
+            self.assertFalse(assess_signature_quality(img).passed)
+
+    def test_uniform_images_are_blocked(self):
+        for value in (255, 0):
+            img = np.full((90, 210), value, np.uint8)
+            self.assertFalse(assess_signature_quality(img).passed)
+            with self.assertRaises(ValueError):
+                normalize_signature(img)
+
+    def test_channel_layouts_and_uint16_take_the_textured_route(self):
+        gray, _ = signature(True, 208)
+        variants = {
+            "bgr": cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR),
+            "bgra": cv2.cvtColor(gray, cv2.COLOR_GRAY2BGRA),
+            "uint16": gray.astype(np.uint16) * 257,
+        }
+        for name, img in variants.items():
+            q = assess_signature_quality(img)
+            self.assertTrue(q.passed, (name, q.blocking_issues))
+            self.assertTrue(q.background_removed, name)
+            self.assertGreater(normalize_signature(img).ink_pixel_count, 0, name)
+
+    def test_inverted_polarity_with_texture(self):
+        q = assess_signature_quality(255 - signature(True, 208)[0])
+        self.assertTrue(q.passed, q.blocking_issues)
+        self.assertTrue(q.background_removed)
+        self.assertIn("POLARITY_INVERTED_CORRECTED", q.warnings)
+
+    def test_textured_fraction_boundary(self):
+        from signature_verification_system.src.preprocessing.background import _DarknessAnalysis, _texture_report
+
+        n = 10_000
+        for share, expected in ((TEXTURED_MIN_FRACTION, True), (TEXTURED_MIN_FRACTION - 0.001, False)):
+            darkness = np.zeros(n)
+            darkness[: int(round(share * n))] = 0.5
+            report = _texture_report(_DarknessAnalysis(darkness, 1.0, np.ones(n, bool)))
+            self.assertIs(report.is_textured, expected, share)
 
 
 class TestFailureHandling(unittest.TestCase):
