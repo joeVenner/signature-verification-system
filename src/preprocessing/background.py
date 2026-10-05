@@ -54,8 +54,8 @@ MIN_BACKGROUND_PX = 50
 # Texture detector. A background pixel is "textured" when it is darker than
 # both an absolute floor and a share of the ink level. EXP-025 (fraction of
 # textured background pixels): clean CEDAR dev and all 11 capture conditions
-# max 0.009 except ruled_lines (2 px rule every 36 px) max 0.061; guilloche
-# composites p10 0.27-0.31, the field screenshot 0.47-0.53.
+# max 0.013 except shadow_gradient 0.053 and ruled_lines (2 px rule every
+# 36 px) 0.061; guilloche composites p10 0.27-0.31, field screenshot 0.47-0.53.
 TEXTURE_MIN_DARKNESS = 0.08
 TEXTURE_REL_DARKNESS = 0.15
 TEXTURED_MIN_FRACTION = 0.15   # ~2.5x the ruled-lines maximum

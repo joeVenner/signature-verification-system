@@ -1278,8 +1278,8 @@ differences below ~2 EER points are within noise.
   (overlapping); orientation coherence 0.49 vs 0.82 (overlapping). Darkness is the cue.
   Field crop: paper ~240, guilloche dips to 165-190, period ~4 px at 208 px, ink 40-80.
 * Detector: share of background pixels (> 3 px from ink core) darker than max(0.08, 0.15 x ink
-  level). Clean dev + 11 capture conditions (dev and val, 660 images each): max 0.009, ruled_lines
-  max 0.061; guilloche composites p10 0.27-0.31; threshold 0.15. Fired on 0 / 17,160 clean and
+  level). Clean dev + 11 capture conditions (dev, 660 images each): max 0.013, shadow_gradient
+  0.053, ruled_lines 0.061 (full-dev re-measure; an earlier 1/3 sample under-reported shadow); guilloche composites p10 0.27-0.31; threshold 0.15. Fired on 0 / 17,160 clean and
   capture-condition images.
 * Extraction: hysteresis on the darkness map (seeds level + 0.6 (ink - level), grow level + 0.05,
   level = q98 of background); keeps ink darkness; rejects masks whose 5 largest components hold
@@ -1310,6 +1310,10 @@ differences below ~2 EER points are within noise.
   cedar55_dev composites (same builder, not used for any choice): score 0.00 -> 2.39, mixed
   skilled EER 37.6% -> 23.1%, INCONCLUSIVE 11.4% -> 0.3%, grey 33.5 -> 13.8%, tint 30.6 ->
   13.1%, bcsd_real 40.5 -> 33.2%, clean_lowres 22.7 -> 12.1%, skilled MATCH 0.0%.
+* Review fixes (2026-10-06): upscale capped at 4 Mpx, aspect > 20:1 blocked, gate never raises,
+  sparse-ink fallback (q99.9 when q99.9 > 1.8 x q99), one routing per image in the verifier.
+  Re-measured: clean val 5.255 with the clean block bit-identical to bcd00ac; dev composites
+  unchanged (score 2.394, mixed skilled EER 23.1%, INCONCLUSIVE 0.3%, identical JSON blocks).
 * Remaining gap: bcsd_real (dark printed text, barcodes, rules as dark as ink). Not texture;
   needs print/ink separation (colour, glyph regularity).
 * Cost: detection ~16 ms per call (runs in the gate and in normalisation).
