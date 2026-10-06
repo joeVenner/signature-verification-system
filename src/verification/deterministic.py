@@ -12,6 +12,7 @@ Extracts and fuses structural, topological, and kinematic micro-features:
 
 from __future__ import annotations
 
+import logging
 from typing import Dict, List, Tuple, Optional
 import cv2
 import numpy as np
@@ -66,6 +67,11 @@ def _best_signals(per_reference: List[dict]) -> dict:
 
 def _band_note(band: str) -> str:
     return _BAND_NOTES[band]
+
+
+_LOG = logging.getLogger(__name__)
+# Fixed text for internal failures: OpenCV / allocator messages never reach a response.
+EXTRACTION_ERROR_REASON = "feature extraction failed"
 
 
 def prepare_or_none(image: Optional[np.ndarray]) -> Optional[PreparedSignature]:
@@ -342,6 +348,9 @@ class DeterministicVerifier:
             que_feat = extract_features(questioned_image, self.config.representation, p_que)
         except ValueError as exc:
             return self._inconclusive(str(exc), quality)
+        except (cv2.error, MemoryError):
+            _LOG.warning("feature extraction failed during verify", exc_info=True)
+            return self._inconclusive(EXTRACTION_ERROR_REASON, quality)
         result = self._result_from_features(ref_feat, que_feat)
         pair = compare(ref_feat, que_feat, self.config.fusion, self.config.representation)
         signals = explanation_signals(ref_feat, que_feat, pair)
@@ -374,6 +383,9 @@ class DeterministicVerifier:
             que_feat = extract_features(questioned_image, self.config.representation, p_que)
         except ValueError as exc:
             return self._inconclusive(f"questioned image: {exc}", quality)
+        except (cv2.error, MemoryError):
+            _LOG.warning("questioned feature extraction failed", exc_info=True)
+            return self._inconclusive(f"questioned image: {EXTRACTION_ERROR_REASON}", quality)
         ref_feats = []
         for img, p, q in zip(reference_images, p_refs, q_refs):
             if not q.passed:
@@ -381,6 +393,9 @@ class DeterministicVerifier:
             try:
                 ref_feats.append(extract_features(img, self.config.representation, p))
             except ValueError:
+                continue
+            except (cv2.error, MemoryError):
+                _LOG.warning("reference feature extraction failed", exc_info=True)
                 continue
         if not ref_feats:
             return self._inconclusive("no usable reference specimen", quality)

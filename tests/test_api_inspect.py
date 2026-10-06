@@ -244,5 +244,37 @@ class InspectQualityGateTest(unittest.TestCase):
         self.assertIsNone(result.questioned.harmonised_png)
         self.assertEqual(spy.call_count, 1)        # the reference only
 
+
+class ExtractionErrorTest(unittest.TestCase):
+    """OpenCV failures inside feature extraction give fixed messages, never a 500 or the error text."""
+
+    @staticmethod
+    def _boom(*_args, **_kwargs):
+        raise cv2.error("secret internal detail")
+
+    def test_inspect_endpoint_and_verifier(self):
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.verification import deterministic
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        client = TestClient(create_app(audit_logger=_logger(tmp.name, "audit"), samples=None))
+        body = {"reference_images": [to_b64(synthetic_signature(1))], "questioned_image": to_b64(synthetic_signature(7))}
+        with unittest.mock.patch.object(inspection, "extract_features", self._boom), \
+                unittest.mock.patch.object(deterministic, "extract_features", self._boom):
+            r = client.post("/api/v1/signature/inspect", json=body)
+            ref, que = synthetic_signature(1), synthetic_signature(7)
+            single = deterministic.DeterministicVerifier().verify(ref, que)
+            multi = deterministic.DeterministicVerifier().verify_against_references([ref, ref], que)
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertNotIn("secret internal detail", r.text)
+        payload = r.json()
+        self.assertEqual(payload["comparison"]["band"], "INCONCLUSIVE")
+        self.assertEqual(payload["questioned"]["error"], inspection.EXTRACTION_FAILED_MESSAGE)
+        for result in (single, multi):
+            self.assertEqual(result.decision_band, "INCONCLUSIVE")
+            self.assertNotIn("secret internal detail", result.model_dump_json())
+            self.assertIn(deterministic.EXTRACTION_ERROR_REASON, result.notes[0])
+
 if __name__ == "__main__":
     unittest.main()

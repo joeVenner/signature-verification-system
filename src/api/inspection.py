@@ -14,6 +14,7 @@ import logging
 import time
 from typing import Dict, List, Literal, Optional
 
+import cv2
 import numpy as np
 from pydantic import BaseModel, Field
 
@@ -149,6 +150,9 @@ def _features_or_error(image: np.ndarray, verifier: DeterministicVerifier) -> tu
     except ValueError:
         # The exception text is logged, never returned: a future message could expose internals.
         LOGGER.info("feature extraction failed during inspect", exc_info=True)
+        return None, EXTRACTION_FAILED_MESSAGE
+    except (cv2.error, MemoryError):
+        LOGGER.warning("feature extraction error during inspect", exc_info=True)
         return None, EXTRACTION_FAILED_MESSAGE
 
 
