@@ -6,6 +6,7 @@ All notable changes to this project are documented here, following
 ## [Unreleased]
 
 ### Added
+- Capture-scale matching (`src/verification/capture_scale.py`, EXP-027): very fine captures (pen > 7 px) are downsampled before extraction, and when one image of a pair is coarser than any clean scan (ink width < 4.9 px) the finer one is re-extracted at the coarser capture scale (blur-floor model). Validation clearance 5.26 -> 5.33 (scale 0.5 EER 16.7% -> 15.4%, scale 2.0 17.2% -> 12.1%), cheque composite 1.85 -> 2.31; clean pairs bit-identical.
 - Cheque-background ink extraction (`src/preprocessing/background.py`): guilloche / pattern backgrounds are detected and the signature ink is extracted (hysteresis seeded from the darkest strokes, grown to just above the measured texture level); crops narrower than 256 px are upscaled. On cheque composites of the validation set skilled EER 40.0% -> 23.8% and INCONCLUSIVE 12.6% -> 0.2%; clean scans are unchanged (EXP-025).
 - `benchmark/cheque_composite.py` (validation signatures on guilloche, tinted and real cheque backgrounds at ~200 px) and `benchmark/cheque_extraction_iou.py` (ink-mask IoU against BCSD signature masks).
 - Frozen 0-10 clearance score for the 1:1 problem (`benchmark/clearance_score.py`): clean discrimination, 11 deterministic capture conditions and the production operating point, with a forgery-accept safety gate. Final: holdout 4.93 -> 5.78, test 5.26 -> 6.00, validation 3.88 -> 5.24 (see `benchmark/REPORT.md`).
@@ -31,6 +32,8 @@ All notable changes to this project are documented here, following
 - `docs/DETERMINISM.md` and `src/core/determinism.py` (single determinism control point).
 
 ### Changed
+- `benchmark/cheque_composite.py` scores each distinct (reference, query) pair once, grouped by reference, so capture-scale re-extractions are reused across variants (1,340 s -> 587 s, identical output).
+- `similarity.compare` matches the two images' capture scales first; `SignatureFeatures` now carries the source image and its pen / ink widths (a pair with a coarse image re-extracts the finer one: /verify 383-398 ms -> 474-567 ms on cheque-size queries, in-band pairs unchanged; bounded 32-entry / 64 MB cache).
 - The signature quality gate measures noise, contrast and ink on the extracted ink layer when the background is textured, so legible cheque crops are no longer rejected as `EXCESSIVE_NOISE`. Texture without separable ink is blocked as `BACKGROUND_NOT_SEPARABLE`. New quality fields `background_texture` and `background_removed`, plus the warnings `TEXTURED_BACKGROUND_REMOVED` and `LOW_RESOLUTION_UPSCALED`.
 - Stroke direction and pressure pattern now keep the better of the specimen->query and query->specimen alignments (symmetric); fusion, thresholds and evidence reference refitted. Dev CV skilled EER 10.58% -> 9.59%; val clean skilled EER 12.5% -> 11.8%, clearance score 5.06 -> 5.24; ~5 ms more per pair (EXP-019).
 - ACCEPT / REVIEW / REJECT thresholds are now selected from writer-disjoint out-of-fold logits (skilled q99.75 / random q99.9 + margin; genuine q5) with a nested held-out check. Single-specimen val genuine auto-match 28.2% -> 36.8%, genuine NOMATCH 8.0% -> 5.1%, skilled MATCH 0.3%; clearance score 4.98 -> 5.06 (EXP-018).

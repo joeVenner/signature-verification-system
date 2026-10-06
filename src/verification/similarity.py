@@ -16,7 +16,11 @@ from signature_verification_system.src.core.config import (
     RepresentationParams,
 )
 from signature_verification_system.src.preprocessing.normalization import canonicalize
-from signature_verification_system.src.verification.features import SignatureFeatures, gradient_grid_descriptor
+from signature_verification_system.src.verification.features import (
+    SignatureFeatures,
+    gradient_grid_descriptor,
+    match_capture_scale,
+)
 from signature_verification_system.src.verification.stroke_geometry import StrokeSignals, stroke_signals
 
 
@@ -191,9 +195,14 @@ def compare(
     so already; layout and keypoint keep the specimen -> query direction. Measured on dev:
     CV skilled EER 10.58% -> 9.59% for ~5 ms more per pair (5.4 -> 10.2 ms; one feature
     extraction is ~180 ms).
+
+    When one image was captured much coarser than the other (ink width below the clean
+    band), the finer one is first re-extracted at the coarser capture (EXP-027); this
+    costs one extra extraction for such pairs (cached) and nothing for any other pair.
     """
     f = fusion or DEFAULT_CONFIG.fusion
     p = params or DEFAULT_CONFIG.representation
+    a, b = match_capture_scale(a, b, p)
     k = keypoint_similarity(a, b, p)
     alignment = aligned_shape(a, b, k, p)
     unaligned = shape_similarity(a, b)
