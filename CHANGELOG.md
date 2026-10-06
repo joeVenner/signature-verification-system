@@ -42,6 +42,7 @@ All notable changes to this project are documented here, following
 - `is_match` is true only for ACCEPT.
 
 ### Security
+- Signature images above 16 Mpx (`MAX_PROCESS_PIXELS`) are no longer processed: the quality gate blocks them as `IMAGE_DIMENSIONS_UNSUPPORTED` (INCONCLUSIVE) before any float64 working copy is made, so a burst of large in-aspect uploads cannot exhaust memory. `/signature/inspect` now prepares and extracts each image once instead of twice.
 - Low-resolution upscaling is capped at 4 Mpx of output and images with an aspect ratio above 20:1 are not processed (`IMAGE_DIMENSIONS_UNSUPPORTED`), closing a single-request memory-exhaustion path. The signature quality gate no longer raises on preprocessing failures (`PREPROCESSING_FAILED`), and OpenCV errors during normalisation become INCONCLUSIVE without exposing their text.
 - Content-Security-Policy and `X-Content-Type-Options: nosniff` on every response; inspect no longer returns raw exception text.
 - The API no longer reads server filesystem paths supplied by clients.
