@@ -1320,6 +1320,8 @@ differences below ~2 EER points are within noise.
 
 ## EXP-026 — Capture-resolution matching by pen width (not merged)
 
+> Superseded by EXP-027 (shipped), which keeps K1 and replaces the K2 pair trigger.
+
 * Problem: 1:1 verification with very different capture resolutions (e.g. a 417x214 specimen
   scan vs a 208x86 cheque crop). M-001 showed scale 0.5 / 2.0 got worse after EXP-017.
 * Diagnosis (dev, production fusion, clean reference vs perturbed query). Skilled AUC per signal:
@@ -1436,8 +1438,28 @@ differences below ~2 EER points are within noise.
 
   Mixed random EER 12.5 -> 10.5%, AUC skilled 0.821 -> 0.836.
 * Keep bar met: every scale condition and every cheque variant improves, clean bit-identical.
-  Skilled MATCH: val scale_2.0 0 -> 2 of 1980 pairs (0.10%), scale_0.5 1 -> 0; cheque mixed 1 -> 0.
+* Decision changes (off -> R4): val scale_2.0 skilled MATCH 0 -> 2 of 1980 pairs (0.10%),
+  scale_0.5 skilled MATCH 1 -> 0 of 1980; cheque mixed skilled MATCH 1 -> 0 of 1980 and genuine
+  MATCH 9.9 -> 15.4%; val faint_ink skilled AUC 0.94322 -> 0.94321 (EER and operating point
+  unchanged). The forgery-accept safety gate does not trigger anywhere.
 * Shipped as plain code (experiment switches removed); equivalence re-run of val and cheque on
   the final commit reproduces the R4 JSON exactly (`val27_final.json`, `cheque27_final.json`).
-* Latency (not re-measured; EXP-026 figures): one extra extraction (~180-450 ms) only for pairs with a coarse image or a > 7 px
-  capture; repeated (image, factor) re-extractions hit a bounded 32-entry content-keyed LRU.
+* Latency, measured (`POST /api/v1/verify` via TestClient, median of 5, val writer 10 reference
+  vs a genuine query; cold = re-extraction cache emptied before each request):
+
+| pair | before (7a9e9f2) | after, cold | after, warm |
+| --- | --- | --- | --- |
+| in-band (clean vs clean) | 457 ms | 458 ms | 458 ms |
+| clean ref vs cheque clean_lowres | 385 ms | 512 ms (+33%) | 404 ms |
+| clean ref vs cheque guilloche_grey | 398 ms | 567 ms (+42%) | 399 ms |
+| clean ref vs cheque bcsd_real | 383 ms | 474 ms (+24%) | 399 ms |
+
+  A coarse pair costs one extra extraction of the finer image at the coarser scale (~104 ms
+  mean over the cheque benchmark); `verify` scores the pair more than once and the later calls
+  hit the cache. The cache holds at most 32 entries and 64 MB (~0.75 MB per CEDAR-size entry),
+  entries are read-only.
+* Benchmark cost: the cheque composite run went 342 s (off) -> 1,340 s, because ~99.6% of its
+  17,000 comparisons need a re-extraction and its five evaluation passes cycled ~3,100 distinct
+  (reference, factor) entries through the 32-entry cache (9,918 misses; no LRU up to 1,024
+  entries helps that order). Scoring each distinct pair once, grouped by reference, brings it to
+  587 s with identical output (`cheque27_grouped.json`). Val clearance is unaffected (1,137 s).

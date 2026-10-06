@@ -32,7 +32,8 @@ All notable changes to this project are documented here, following
 - `docs/DETERMINISM.md` and `src/core/determinism.py` (single determinism control point).
 
 ### Changed
-- `similarity.compare` matches the two images' capture scales first; `SignatureFeatures` now carries the source image and its pen / ink widths (one extra extraction, cached, for pairs with a coarse image).
+- `benchmark/cheque_composite.py` scores each distinct (reference, query) pair once, grouped by reference, so capture-scale re-extractions are reused across variants (1,340 s -> 587 s, identical output).
+- `similarity.compare` matches the two images' capture scales first; `SignatureFeatures` now carries the source image and its pen / ink widths (a pair with a coarse image re-extracts the finer one: /verify 383-398 ms -> 474-567 ms on cheque-size queries, in-band pairs unchanged; bounded 32-entry / 64 MB cache).
 - The signature quality gate measures noise, contrast and ink on the extracted ink layer when the background is textured, so legible cheque crops are no longer rejected as `EXCESSIVE_NOISE`. Texture without separable ink is blocked as `BACKGROUND_NOT_SEPARABLE`. New quality fields `background_texture` and `background_removed`, plus the warnings `TEXTURED_BACKGROUND_REMOVED` and `LOW_RESOLUTION_UPSCALED`.
 - Stroke direction and pressure pattern now keep the better of the specimen->query and query->specimen alignments (symmetric); fusion, thresholds and evidence reference refitted. Dev CV skilled EER 10.58% -> 9.59%; val clean skilled EER 12.5% -> 11.8%, clearance score 5.06 -> 5.24; ~5 ms more per pair (EXP-019).
 - ACCEPT / REVIEW / REJECT thresholds are now selected from writer-disjoint out-of-fold logits (skilled q99.75 / random q99.9 + margin; genuine q5) with a nested held-out check. Single-specimen val genuine auto-match 28.2% -> 36.8%, genuine NOMATCH 8.0% -> 5.1%, skilled MATCH 0.3%; clearance score 4.98 -> 5.06 (EXP-018).
