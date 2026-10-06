@@ -22,6 +22,7 @@ order is made canonical by sorting.
 from __future__ import annotations
 
 import hashlib
+import logging
 import threading
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -50,6 +51,10 @@ from signature_verification_system.src.verification.stroke_geometry import (
     StrokeGeometry,
     extract_stroke_geometry,
 )
+
+_LOG = logging.getLogger(__name__)
+# Failures of an optional capture-scale re-extraction: the caller keeps what it had.
+_RESAMPLE_ERRORS = (ValueError, cv2.error, MemoryError)
 
 
 @dataclass(frozen=True)
@@ -122,6 +127,8 @@ def _normalize_at_capture_scale(
     """Normalise `image`, first downsampling it if it was captured finer than the clean band.
 
     `prepared` belongs to `image` and is therefore only used for the first normalisation.
+    If a downsampled pass fails (e.g. the ink vanishes), the last good pass is kept: the
+    image already passed the gate at its own resolution, so this never makes it fail.
 
     Returns:
         (normalised signature, the image it was taken from, `_measure` of it).
@@ -136,9 +143,14 @@ def _normalize_at_capture_scale(
             break
         # Resample the original once by the accumulated factor (no compounding of resampling blur).
         total = max(total * factor, MIN_RESAMPLE_FACTOR)
-        source = downsample(image, total)
-        norm = normalize_signature(source)
-        widths = _measure(norm, source)
+        try:
+            smaller = downsample(image, total)
+            smaller_norm = normalize_signature(smaller)
+            smaller_widths = _measure(smaller_norm, smaller)
+        except _RESAMPLE_ERRORS:
+            _LOG.info("high-resolution downsample failed; keeping the previous pass", exc_info=True)
+            break
+        source, norm, widths = smaller, smaller_norm, smaller_widths
     return norm, source, widths
 
 
@@ -216,8 +228,8 @@ def match_capture_scale(
     Returns `(a, b)` unchanged unless the image with the smaller ink width is below
     the clean band (`capture_scale.pair_factor`); then the other image is
     re-extracted after downsampling it to the same modelled capture scale. If that
-    fails (no ink left), the original features are kept: matching is an accuracy
-    aid, never a reason to fail.
+    fails (no ink left, an OpenCV error, out of memory), the original features are
+    kept: matching is an accuracy aid, never a reason to fail.
     """
     if a.source_image is None or b.source_image is None:
         return a, b
@@ -229,6 +241,7 @@ def match_capture_scale(
         return a, b
     try:
         matched = _coarser(fine, factor, p)
-    except ValueError:
+    except _RESAMPLE_ERRORS:
+        _LOG.info("capture-scale re-extraction failed; comparing unmatched", exc_info=True)
         return a, b
     return (matched, b) if a_is_finer else (a, matched)

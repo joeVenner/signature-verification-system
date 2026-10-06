@@ -1,6 +1,11 @@
 """Capture-resolution matching by pen width (src/verification/capture_scale.py, EXP-026/027)."""
 
+import base64
+import tempfile
 import unittest
+import unittest.mock
+from dataclasses import replace
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -179,6 +184,110 @@ class ExtractionTest(unittest.TestCase):
         finally:
             features._COARSE_CACHE_SIZE = saved
             features._coarse_cache.clear()
+
+def _unmatched(a, b):
+    """compare() on the unmatched path (no source image, so matching cannot run)."""
+    return compare(replace(a, source_image=None), replace(b, source_image=None))
+
+
+class FallbackTest(unittest.TestCase):
+    """Matching is an accuracy aid: any re-extraction failure falls back to the original features."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.f_native = extract_features(signature(1.0))
+        cls.f_coarse = extract_features(cv2.resize(signature(1.0), (208, 90), interpolation=cv2.INTER_AREA))
+        cls.expected = _unmatched(cls.f_native, cls.f_coarse)
+
+    def test_resample_errors_compare_unmatched(self):
+        for exc in (ValueError("no ink"), cv2.error("opencv detail"), MemoryError("allocator detail")):
+            with self.subTest(error=type(exc).__name__):
+                boom = unittest.mock.Mock(side_effect=exc)
+                with unittest.mock.patch.object(features, "_coarser", boom), \
+                        self.assertLogs(features.__name__, level="INFO"):
+                    a, b = match_capture_scale(self.f_native, self.f_coarse)
+                    result = compare(self.f_native, self.f_coarse)
+                boom.assert_called()
+                self.assertIs(a, self.f_native)
+                self.assertIs(b, self.f_coarse)
+                self.assertEqual(result.fused_logit, self.expected.fused_logit)
+                self.assertEqual(result.signals, self.expected.signals)
+
+    def test_failed_high_resolution_pass_keeps_the_previous_one(self):
+        fine = signature(3.0)
+        reference = extract_features(fine)
+        self.assertLess(reference.source_image.shape[1], fine.shape[1])    # the pass normally runs
+        real = features.normalize_signature
+        calls = []
+
+        def second_call_fails(image, prepared=None):
+            calls.append(image.shape)
+            if len(calls) > 1:
+                raise ValueError("No signature ink detected")
+            return real(image, prepared)
+
+        with unittest.mock.patch.object(features, "normalize_signature", second_call_fails):
+            kept = extract_features(fine)
+        self.assertGreater(len(calls), 1)
+        self.assertIs(kept.source_image, fine)                            # first (full-size) pass kept
+        self.assertGreater(kept.pen_width_px, cs.PEN_WIDTH_MAX_PX)
+
+    def test_unexpected_errors_still_propagate(self):
+        with unittest.mock.patch.object(features, "_coarser", unittest.mock.Mock(side_effect=KeyError("bug"))):
+            with self.assertRaises(KeyError):
+                match_capture_scale(self.f_native, self.f_coarse)
+
+
+class FallbackHttpTest(unittest.TestCase):
+    """A capture-scale failure inside compare() never becomes an HTTP 500."""
+
+    SECRET = "secret internal allocator detail"
+
+    @classmethod
+    def setUpClass(cls):
+        from fastapi.testclient import TestClient
+
+        from signature_verification_system.src.adjudication.audit_logger import AuditLogger
+        from signature_verification_system.src.api.app import create_app
+
+        cls.tmp = tempfile.TemporaryDirectory()
+        db = Path(cls.tmp.name) / "audit.db"
+        cls.client = TestClient(create_app(audit_logger=AuditLogger(str(db), str(db.with_suffix(".jsonl"))),
+                                           samples=None))
+
+        def b64(image):
+            ok, buf = cv2.imencode(".png", image)
+            assert ok
+            return base64.b64encode(buf.tobytes()).decode("ascii")
+
+        cls.ref = b64(signature(1.0))
+        cls.que = b64(cv2.resize(signature(1.0), (208, 90), interpolation=cv2.INTER_AREA))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_verify_compare_and_inspect_do_not_fail(self):
+        for exc in (cv2.error(self.SECRET), MemoryError(self.SECRET)):
+            with self.subTest(error=type(exc).__name__):
+                boom = unittest.mock.Mock(side_effect=exc)
+                with unittest.mock.patch.object(features, "_coarser", boom):
+                    responses = {
+                        "verify": self.client.post("/api/v1/verify", json={"ref_image": self.ref,
+                                                                           "test_image": self.que}),
+                        "compare_multi": self.client.post("/api/v1/signature/compare", json={
+                            "reference_images": [self.ref, self.ref], "questioned_image": self.que}),
+                        "inspect": self.client.post("/api/v1/signature/inspect", json={
+                            "reference_images": [self.ref], "questioned_image": self.que}),
+                    }
+                boom.assert_called()                                       # matching was attempted
+                for name, r in responses.items():
+                    self.assertEqual(r.status_code, 200, f"{name}: {r.text}")
+                    self.assertNotIn(self.SECRET, r.text, name)
+                self.assertNotEqual(responses["verify"].json()["verification"]["decision_band"], "INCONCLUSIVE")
+                self.assertNotEqual(responses["compare_multi"].json()["band"], "INCONCLUSIVE")
+                self.assertNotEqual(responses["inspect"].json()["comparison"]["band"], "INCONCLUSIVE")
+
 
 if __name__ == "__main__":
     unittest.main()
