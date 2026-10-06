@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Sequence
 import numpy as np
 from pydantic import BaseModel, Field
 
+from signature_verification_system.src.core.types import VerificationResult
 from signature_verification_system.src.verification.deterministic import DeterministicVerifier
 from signature_verification_system.src.verification.explanation import render_text
 
@@ -92,7 +93,12 @@ def compare_signatures(
     v = verifier or DeterministicVerifier()
     result = v.verify(references[0], questioned) if len(references) == 1 else \
         v.verify_against_references(list(references), questioned)
+    return comparison_from_result(result, v, len(references))
 
+
+def comparison_from_result(result: VerificationResult, v: DeterministicVerifier,
+                           references_supplied: int) -> SignatureComparison:
+    """Signature-only view of a verifier result (the verdict `compare_signatures` returns)."""
     band = result.decision_band or "INCONCLUSIVE"
     multi = (result.reference_count or 0) >= 2
     t = v.config.decision
@@ -109,7 +115,7 @@ def compare_signatures(
         accept_threshold=accept_t if verified else None,
         reject_threshold=reject_t if verified else None,
         references_used=result.reference_count or 0,
-        references_supplied=len(references),
+        references_supplied=references_supplied,
         layout_similarity=f.shape_similarity if verified else None,
         stroke_detail_similarity=f.keypoint_similarity if verified else None,
         consistent_stroke_features=f.keypoint_inliers if verified else None,

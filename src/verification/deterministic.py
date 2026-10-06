@@ -13,6 +13,7 @@ Extracts and fuses structural, topological, and kinematic micro-features:
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 import cv2
 import numpy as np
@@ -26,6 +27,7 @@ from signature_verification_system.src.core.types import (
 from signature_verification_system.src.core.config import (
     SystemConfig,
     DEFAULT_CONFIG,
+    RepresentationParams,
 )
 from signature_verification_system.src.preprocessing.binarization import adaptive_binarize
 from signature_verification_system.src.preprocessing.ink_extractor import (
@@ -86,6 +88,41 @@ def prepare_or_none(image: Optional[np.ndarray]) -> Optional[PreparedSignature]:
         return prepare_image(image)
     except (cv2.error, MemoryError, ValueError):
         return None
+
+
+@dataclass(frozen=True)
+class GatedSignature:
+    """One image after routing, the quality gate and (only if it passed) feature extraction."""
+
+    quality: SignatureQuality
+    features: Optional[SignatureFeatures] = None
+    error: Optional[Exception] = None   # extraction failure: ValueError, cv2.error or MemoryError
+
+
+def gate_and_extract(image: Optional[np.ndarray], params: Optional[RepresentationParams] = None) -> GatedSignature:
+    """Prepare, gate and extract one image exactly once, for callers that need all three.
+
+    `DeterministicVerifier.verify_gated` turns two of these into the same
+    result `verify` gives for the raw images. Never raises for the error types
+    `verify` maps to INCONCLUSIVE; they are returned in `error` instead.
+    """
+    prepared = prepare_or_none(image)
+    quality = assess_signature_quality(image, prepared)
+    if not quality.passed:
+        return GatedSignature(quality)
+    try:
+        return GatedSignature(quality, features=extract_features(image, params, prepared))
+    except ValueError as exc:
+        _LOG.info("feature extraction failed", exc_info=True)
+        return GatedSignature(quality, error=exc)
+    except (cv2.error, MemoryError) as exc:
+        _LOG.warning("feature extraction error", exc_info=True)
+        return GatedSignature(quality, error=exc)
+
+
+def _extraction_reason(exc: Exception) -> str:
+    """INCONCLUSIVE reason: ValueError texts are our own; anything else gets the fixed text."""
+    return str(exc) if isinstance(exc, ValueError) else EXTRACTION_ERROR_REASON
 
 
 class DeterministicVerifier:
@@ -339,10 +376,9 @@ class DeterministicVerifier:
         q_ref = assess_signature_quality(reference_image, p_ref)
         q_que = assess_signature_quality(questioned_image, p_que)
         quality = {"questioned": q_que.model_dump(), "references": [q_ref.model_dump()]}
-        if not q_que.passed:
-            return self._inconclusive("questioned image quality too low (" + ", ".join(q_que.blocking_issues) + ")", quality)
-        if not q_ref.passed:
-            return self._inconclusive("reference specimen quality too low (" + ", ".join(q_ref.blocking_issues) + ")", quality)
+        blocked = self._single_gate(q_ref, q_que, quality)
+        if blocked is not None:
+            return blocked
         try:
             ref_feat = extract_features(reference_image, self.config.representation, p_ref)
             que_feat = extract_features(questioned_image, self.config.representation, p_que)
@@ -351,6 +387,35 @@ class DeterministicVerifier:
         except (cv2.error, MemoryError):
             _LOG.warning("feature extraction failed during verify", exc_info=True)
             return self._inconclusive(EXTRACTION_ERROR_REASON, quality)
+        return self._single_result(ref_feat, que_feat, quality)
+
+    def verify_gated(self, reference: GatedSignature, questioned: GatedSignature) -> VerificationResult:
+        """`verify` on images already passed through `gate_and_extract` (same result, no recomputation).
+
+        Both must come from `gate_and_extract(image, self.config.representation)`.
+        """
+        quality = {"questioned": questioned.quality.model_dump(), "references": [reference.quality.model_dump()]}
+        blocked = self._single_gate(reference.quality, questioned.quality, quality)
+        if blocked is not None:
+            return blocked
+        # Same precedence as `verify`: the reference is extracted (and fails) first.
+        for gated in (reference, questioned):
+            if gated.error is not None:
+                return self._inconclusive(_extraction_reason(gated.error), quality)
+        return self._single_result(reference.features, questioned.features, quality)
+
+    def _single_gate(self, q_ref: SignatureQuality, q_que: SignatureQuality,
+                     quality: dict) -> Optional[VerificationResult]:
+        """INCONCLUSIVE result if either image fails the quality gate (questioned reported first)."""
+        if not q_que.passed:
+            return self._inconclusive("questioned image quality too low (" + ", ".join(q_que.blocking_issues) + ")", quality)
+        if not q_ref.passed:
+            return self._inconclusive("reference specimen quality too low (" + ", ".join(q_ref.blocking_issues) + ")", quality)
+        return None
+
+    def _single_result(self, ref_feat: SignatureFeatures, que_feat: SignatureFeatures,
+                       quality: dict) -> VerificationResult:
+        """Scored 1:1 result with quality report and explanation attached."""
         result = self._result_from_features(ref_feat, que_feat)
         pair = compare(ref_feat, que_feat, self.config.fusion, self.config.representation)
         signals = explanation_signals(ref_feat, que_feat, pair)

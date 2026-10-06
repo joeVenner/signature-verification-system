@@ -236,7 +236,9 @@ class InspectQualityGateTest(unittest.TestCase):
         wide[4:12, 1000:5000] = 30
         reference = synthetic_signature(1)
         start = time.perf_counter()
-        with unittest.mock.patch.object(inspection, "extract_features", wraps=inspection.extract_features) as spy:
+        from signature_verification_system.src.verification import deterministic
+
+        with unittest.mock.patch.object(deterministic, "extract_features", wraps=deterministic.extract_features) as spy:
             result = inspection.inspect_signatures(reference, wide, DeterministicVerifier())
         self.assertLess(time.perf_counter() - start, 20.0)
         self.assertEqual(result.comparison.band, "INCONCLUSIVE")
@@ -296,6 +298,31 @@ class PixelCapTest(unittest.TestCase):
         self.assertEqual(over.quality["questioned"]["blocking_issues"], ["IMAGE_DIMENSIONS_UNSUPPORTED"])
 
 
+class InspectSinglePassTest(unittest.TestCase):
+    """/inspect prepares and extracts each image once, shared by the verdict and the visuals."""
+
+    def test_each_image_prepared_and_extracted_once(self):
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.preprocessing import normalization, quality
+        from signature_verification_system.src.verification import deterministic
+        from signature_verification_system.src.verification.signature_compare import compare_signatures
+
+        verifier = deterministic.DeterministicVerifier()
+        ref, que = synthetic_signature(1), synthetic_signature(7)
+        with unittest.mock.patch.object(deterministic, "extract_features",
+                                        wraps=deterministic.extract_features) as extract, \
+                unittest.mock.patch.object(normalization, "prepare_signature",
+                                           wraps=normalization.prepare_signature) as prep_norm, \
+                unittest.mock.patch.object(quality, "prepare_signature", wraps=quality.prepare_signature) as prep_q:
+            result = inspection.inspect_signatures(ref, que, verifier)
+        self.assertEqual(extract.call_count, 2)
+        self.assertEqual(prep_norm.call_count + prep_q.call_count, 2)
+        self.assertNotEqual(result.comparison.band, "INCONCLUSIVE")
+        self.assertIsNotNone(result.fusion)
+        # The verdict is exactly what /signature/compare returns for the same pair.
+        self.assertEqual(result.comparison, compare_signatures([ref], que, verifier))
+
+
 class ExtractionErrorTest(unittest.TestCase):
     """OpenCV failures inside feature extraction give fixed messages, never a 500 or the error text."""
 
@@ -311,8 +338,7 @@ class ExtractionErrorTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         client = TestClient(create_app(audit_logger=_logger(tmp.name, "audit"), samples=None))
         body = {"reference_images": [to_b64(synthetic_signature(1))], "questioned_image": to_b64(synthetic_signature(7))}
-        with unittest.mock.patch.object(inspection, "extract_features", self._boom), \
-                unittest.mock.patch.object(deterministic, "extract_features", self._boom):
+        with unittest.mock.patch.object(deterministic, "extract_features", self._boom):
             r = client.post("/api/v1/signature/inspect", json=body)
             ref, que = synthetic_signature(1), synthetic_signature(7)
             single = deterministic.DeterministicVerifier().verify(ref, que)
