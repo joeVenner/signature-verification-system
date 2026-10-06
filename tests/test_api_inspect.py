@@ -353,5 +353,60 @@ class ExtractionErrorTest(unittest.TestCase):
             self.assertNotIn("secret internal detail", result.model_dump_json())
             self.assertIn(deterministic.EXTRACTION_ERROR_REASON, result.notes[0])
 
+class ExtractionInternalErrorHttpTest(unittest.TestCase):
+    """cv2.error / MemoryError in extraction: fixed INCONCLUSIVE text over HTTP, never the internal text."""
+
+    SECRET = "secret internal allocator detail"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.client = TestClient(create_app(audit_logger=_logger(cls.tmp.name, "audit"), samples=None))
+        cls.ref, cls.que = to_b64(synthetic_signature(1)), to_b64(synthetic_signature(7))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def _post_all(self, exc: BaseException) -> dict:
+        from signature_verification_system.src.verification import deterministic
+
+        def boom(*_args, **_kwargs):
+            raise exc
+
+        with unittest.mock.patch.object(deterministic, "extract_features", boom):
+            return {
+                "verify": self.client.post("/api/v1/verify", json={"ref_image": self.ref, "test_image": self.que}),
+                "verify_multi": self.client.post("/api/v1/signature/compare", json={
+                    "reference_images": [self.ref, self.ref], "questioned_image": self.que}),
+                "inspect": self.client.post("/api/v1/signature/inspect", json={
+                    "reference_images": [self.ref], "questioned_image": self.que}),
+            }
+
+    def test_internal_errors_map_to_fixed_text(self):
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.verification import deterministic
+
+        reason = deterministic.EXTRACTION_ERROR_REASON
+        self.assertEqual(reason, "feature extraction failed")
+        for exc in (cv2.error(self.SECRET), MemoryError(self.SECRET)):
+            with self.subTest(error=type(exc).__name__):
+                responses = self._post_all(exc)
+                for name, r in responses.items():
+                    self.assertEqual(r.status_code, 200, f"{name}: {r.text}")
+                    self.assertNotIn(self.SECRET, r.text, name)
+                verification = responses["verify"].json()["verification"]
+                self.assertEqual(verification["decision_band"], "INCONCLUSIVE")
+                self.assertEqual(verification["notes"][0], f"INCONCLUSIVE: {reason}.")
+                multi = responses["verify_multi"].json()
+                self.assertEqual(multi["band"], "INCONCLUSIVE")
+                self.assertEqual(multi["notes"][0], f"INCONCLUSIVE: questioned image: {reason}.")
+                inspected = responses["inspect"].json()
+                self.assertEqual(inspected["comparison"]["band"], "INCONCLUSIVE")
+                self.assertEqual(inspected["comparison"]["notes"][0], f"INCONCLUSIVE: {reason}.")
+                self.assertEqual(inspected["reference"]["error"], inspection.EXTRACTION_FAILED_MESSAGE)
+                self.assertEqual(inspected["questioned"]["error"], inspection.EXTRACTION_FAILED_MESSAGE)
+
+
 if __name__ == "__main__":
     unittest.main()
