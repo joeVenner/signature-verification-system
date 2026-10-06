@@ -164,6 +164,15 @@ class InspectEndpointTest(unittest.TestCase):
         self.assertIn("text/html", r.headers["content-type"])
         self.assertEqual(self.client.get("/health").status_code, 200)
 
+    def test_console_renders_routing_fields_as_text(self):
+        r = self.client.get("/console.js")
+        self.assertEqual(r.status_code, 200)
+        script = r.text
+        for field in ("capture_scale", "blocking_issues", "background_removed", "processing_scale"):
+            self.assertIn(field, script)
+        self.assertNotIn("innerHTML", script)
+        self.assertNotIn("insertAdjacentHTML", script)
+
 
 class SamplesEndpointTest(unittest.TestCase):
     @classmethod

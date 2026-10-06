@@ -324,8 +324,11 @@
 
     const margin = $('#margin');
     margin.replaceChildren();
+    const blocked = firstBlockingIssue(data);
     if (data.margin) {
       margin.append(el('span', { class: 'mono', text: data.margin.statement }));
+    } else if (blocked) {
+      margin.append(`${blocked.role}: ${blocked.finding.message} `, el('span', { class: 'mono', text: blocked.finding.code }));
     } else if (c.notes && c.notes.length) {
       margin.textContent = c.notes[0];
     }
@@ -378,6 +381,42 @@
     }
   }
 
+  const ROLE_TITLES = { reference: 'Reference', questioned: 'Questioned' };
+
+  /** First quality-gate block, questioned image first (the verifier reports it first). */
+  function firstBlockingIssue(data) {
+    for (const role of ['questioned', 'reference']) {
+      const q = data[role].quality;
+      if (q && q.blocking_issues && q.blocking_issues.length) {
+        return { role: ROLE_TITLES[role], finding: q.blocking_issues[0] };
+      }
+    }
+    return null;
+  }
+
+  /** Plain-language quality findings for one image: blocking issues as warnings, then notices. */
+  function qualityNotes(data, role) {
+    const q = data[role].quality;
+    if (!q) return [];
+    const title = ROLE_TITLES[role];
+    return [
+      ...q.blocking_issues.map((f) => el('div', { class: 'note warn' }, [`${title}: ${f.message} `, el('span', { class: 'mono', text: f.code })])),
+      ...q.warnings.map((f) => el('div', { class: 'note' }, [`${title}: ${f.message}`])),
+    ];
+  }
+
+  function extractionCaption(img) {
+    const parts = [];
+    if (img.bbox) parts.push(kv('box', `x ${img.bbox[0]}, y ${img.bbox[1]}, ${img.bbox[2]} × ${img.bbox[3]}`));
+    if (img.quality && img.quality.background_removed) {
+      parts.push(kv('background', `patterned, ink extracted (${fmt(img.quality.background_texture * 100, 0)}% textured)`));
+    }
+    if (img.processing_scale !== null && img.processing_scale !== undefined && img.processing_scale !== 1) {
+      parts.push(kv('processed at', `×${fmt(img.processing_scale, 2)}`));
+    }
+    return parts;
+  }
+
   // ------------------------------------------------------------------ pipeline
   function figure(b64, caption, alt) {
     const frame = el('div', { class: 'figure-frame' },
@@ -401,7 +440,7 @@
     $('.stage-num', node).textContent = String(index + 1);
     $('.stage-title', node).textContent = title;
     $('.stage-desc', node).textContent = desc;
-    $('.stage-content', node).append(...[].concat(content));
+    $('.stage-content', node).append(...[].concat(content).filter(Boolean));
     return node;
   }
 
@@ -412,16 +451,15 @@
     const stages = [];
     const errors = ['reference', 'questioned']
       .filter((r) => data[r].error)
-      .map((r) => el('div', { class: 'note warn', text: `${r === 'reference' ? 'Reference' : 'Questioned'}: ${data[r].error}` }));
+      .map((r) => el('div', { class: 'note warn', text: `${ROLE_TITLES[r]}: ${data[r].error}` }));
+    const quality = ['reference', 'questioned'].flatMap((r) => qualityNotes(data, r));
 
     stages.push(stage(0, 'Original', 'The submitted images, downscaled for display only.',
       pairFigures(data, 'original_png', (img) => [kv('size', `${img.width} × ${img.height} px`)], 'Original')));
 
     stages.push(stage(1, 'Signature extraction',
-      'Background flattened and ink level harmonised; the box marks the signature region the engine located.',
-      [pairFigures(data, 'harmonised_png',
-        (img) => (img.bbox ? [kv('box', `x ${img.bbox[0]}, y ${img.bbox[1]}, ${img.bbox[2]} × ${img.bbox[3]}`)] : []),
-        'Harmonised image with signature box'), ...errors]));
+      'Background flattened and ink level harmonised (on a patterned cheque background the ink is extracted first; small crops are upscaled); the box marks the signature region the engine located, in processed-image pixels.',
+      [pairFigures(data, 'harmonised_png', extractionCaption, 'Harmonised image with signature box'), ...errors, ...quality]));
 
     stages.push(stage(2, 'Normalisation', 'Tight crop of the ink-darkness map that every descriptor is computed on.',
       pairFigures(data, 'ink_crop_png',
@@ -438,7 +476,8 @@
       el('div', { class: 'legend' }, [
         el('span', {}, [el('span', { class: 'swatch', style: `background:${PNG_COLOURS.questioned}` }), 'Skeleton']),
         el('span', {}, [el('span', { class: 'swatch', style: `background:${PNG_COLOURS.keypoint}` }), 'Keypoint']),
-      ])]));
+      ]),
+      data.capture_scale ? el('div', { class: 'note', text: data.capture_scale.statement }) : null]));
 
     stages.push(stage(4, 'Alignment & comparison',
       'Reference strokes laid over the questioned strokes on the comparison canvas.', renderAlignment(data)));
