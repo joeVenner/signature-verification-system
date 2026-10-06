@@ -1388,3 +1388,56 @@ differences below ~2 EER points are within noise.
   (the partner follows the coarse image's < 256 px upscale route).
 * All EXP-026 numbers were measured on base 0bd2bc9, before the parent's review fixes (sparse-ink
   fallback, upscale cap); the exp branch must be re-measured after porting.
+* Superseded by EXP-027 (shipped): K1 kept, the K2 pair trigger replaced by the ink width.
+
+## EXP-027 — Capture-scale matching, round 2: ink-width trigger + blur-floor model (merged)
+
+* Problem: EXP-026 K2 regressed val scale_0.5 (16.7 -> 17.7%) because the distance-transform
+  pen width of 0.5x captures is blur-inflated back into the clean band (only 37% detected).
+* Cue: ink width = ink area (darkness > 0.25) / skeleton length, in source px. It counts the
+  whole blurred stroke, so at 0.5x it falls below every clean dev scan for 86% of images and
+  no other dev capture condition falls below it. Trigger: coarser image < 4.9 px (clean dev
+  min 5.15 x 0.95). Blur-floor model from dev medians (clean vs 0.5x), working px:
+  w = 3.484 s + 2.903, inverted to a capture scale per image; an in-band finer image is s = 1.
+* Configurations, declared up front, dev clearance score (production fusion, no refit; K1
+  per-image step in R1-R4, R0 has neither step; clean sha256 identical in all):
+
+| cfg | pair rule | dev score | R | scale 0.5 EER | scale 2.0 EER |
+| --- | --- | --- | --- | --- | --- |
+| R0 | off (no matching at all) | 5.969 | 0.474 | 13.80 | 12.48 |
+| R1 | DT pen < 3.6, ratio (EXP-026 K2) | 6.157 | 0.537 | 13.80 | 9.34 |
+| R2 | ink < 4.9, ink ratio, re-measured once | 6.273 | 0.576 | 11.87 | 9.34 |
+| R3 | R2 + partner follows the coarse image's upscale route | 6.288 | 0.581 | 11.63 | 9.34 |
+| R4 | ink < 4.9, blur-floor model scale ratio | **6.296** | 0.583 | **11.49** | 9.34 |
+
+  Winner: R4 (best and simplest: the factor is closed-form, no extra normalisation to plan it).
+* Val, scored once (off -> R4): clearance **5.255 -> 5.326** (D 0.622, O 0.461, R 0.462 -> 0.485),
+  clean sha256 identical; the other nine conditions have identical EER and operating point
+  (faint_ink skilled AUC 0.94322 -> 0.94321: a few faint pairs fall below the ink-width trigger).
+
+| val condition | EER skl off | EER skl R4 | genuine NOMATCH off -> R4 | skilled MATCH off -> R4 |
+| --- | --- | --- | --- | --- |
+| scale_0.5 | 16.75 | **15.37** | 13.8 -> 8.8% | 0.05 -> 0.0% |
+| scale_2.0 | 17.22 | **12.10** | 17.2 -> 6.4% | 0.0 -> 0.10% |
+| other nine + clean | unchanged | unchanged | unchanged | unchanged |
+
+  The off -> R4 gain at scale 2.0 is K1 plus the pair step (dev: K1 alone gives the 9.34 of R1-R4).
+
+* Cheque composites, val (refs clean), off -> R4: score **1.852 -> 2.312** (D 0.163 -> 0.207,
+  O 0.174 -> 0.234, R 0.227 -> 0.261).
+
+| variant | EER skl off | EER skl R4 | genuine MATCH off -> R4 | skilled MATCH off -> R4 |
+| --- | --- | --- | --- | --- |
+| mixed | 23.75 | **22.92** | 9.9 -> 15.4% | 0.05 -> 0.0% |
+| guilloche_grey | 16.86 | 15.42 | 11.2 -> 18.5% | 0.05 -> 0.0% |
+| guilloche_tint | 16.14 | 15.04 | 13.8 -> 20.0% | 0.05 -> 0.05% |
+| bcsd_real | 31.76 | 30.33 | 6.7 -> 8.8% | 0.0 -> 0.0% |
+| clean_lowres | 15.40 | 14.32 | 16.7 -> 28.1% | 0.05 -> 0.0% |
+
+  Mixed random EER 12.5 -> 10.5%, AUC skilled 0.821 -> 0.836.
+* Keep bar met: every scale condition and every cheque variant improves, clean bit-identical.
+  Skilled MATCH: val scale_2.0 0 -> 2 of 1980 pairs (0.10%), scale_0.5 1 -> 0; cheque mixed 1 -> 0.
+* Shipped as plain code (experiment switches removed); equivalence re-run of val and cheque on
+  the final commit reproduces the R4 JSON exactly (`val27_final.json`, `cheque27_final.json`).
+* Latency (not re-measured; EXP-026 figures): one extra extraction (~180-450 ms) only for pairs with a coarse image or a > 7 px
+  capture; repeated (image, factor) re-extractions hit a bounded 32-entry content-keyed LRU.
