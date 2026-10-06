@@ -1263,3 +1263,57 @@ differences below ~2 EER points are within noise.
 * Cost: cross-writer pair comparison 9.6 -> 31.5 ms (re-extraction).
 * Not merged: lower frozen score. Kept on its branch because it is the better choice when
   reference and questioned images come at very different resolutions.
+
+## EXP-025 — Cheque-background ink extraction + low-resolution upscaling (merged)
+
+* Problem: a 208x86 grey cheque crop with dense guilloche was INCONCLUSIVE (`EXCESSIVE_NOISE`):
+  the gate read the texture as noise, and the flat-field kept the texture as faint ink.
+* Data. (a) BCSD (Khan 2021, arXiv:2104.12203; Kaggle `saifkhichi96/bank-checks-signatures-segmentation-dataset`,
+  listed CC0, images from IDRBT / Google Images): 158 cheques with manual signature masks.
+  (b) `cheque_composite.py`: cedar55_val questioned images on guilloche_grey / guilloche_tint /
+  bcsd_real (signature inpainted out) / clean_lowres backgrounds, 190-230 px wide, blur, noise,
+  JPEG q55-80, seeded per image. Score formula fixed in its docstring before any number.
+* Measured (BCSD crops, closing-based paper estimate): background texture darkness median 17 vs
+  ink 166 grey levels (native), ratio p10 3.4x; texture line width p50 5.5 px vs ink 7.4 px
+  (overlapping); orientation coherence 0.49 vs 0.82 (overlapping). Darkness is the cue.
+  Field crop: paper ~240, guilloche dips to 165-190, period ~4 px at 208 px, ink 40-80.
+* Detector: share of background pixels (> 3 px from ink core) darker than max(0.08, 0.15 x ink
+  level). Clean dev + 11 capture conditions (dev, 660 images each): max 0.013, shadow_gradient
+  0.053, ruled_lines 0.061 (full-dev re-measure; an earlier 1/3 sample under-reported shadow); guilloche composites p10 0.27-0.31; threshold 0.15. Fired on 0 / 17,160 clean and
+  capture-condition images.
+* Extraction: hysteresis on the darkness map (seeds level + 0.6 (ink - level), grow level + 0.05,
+  level = q98 of background); keeps ink darkness; rejects masks whose 5 largest components hold
+  < 35% of the ink or cover > 35% (pure texture: median 5%). Rejected levers: grey opening,
+  Gaussian smoothing, gap bridging, component-size filter (IoU equal or worse).
+* Low resolution: crops < 256 px wide upscaled (bicubic) to 512 px. clean_lowres skilled EER
+  25.0% -> 15.4%. Clean CEDAR is >= 270 px wide, so only scale_0.5 is affected.
+* Gate: noise / contrast / ink measured on the extracted layer at input resolution; sharpness on
+  the input; textured-but-inseparable -> `BACKGROUND_NOT_SEPARABLE`.
+
+| metric | before | after |
+| --- | --- | --- |
+| BCSD Train native, textured crops (n=25): IoU / F1 | 0.573 / 0.705 | 0.638 / 0.756 |
+| BCSD Test native, textured (n=3): IoU / F1 | 0.663 / 0.795 | 0.740 / 0.847 |
+| BCSD Train 220 px, all (n=129): IoU / F1 | 0.524 / 0.668 | 0.608 / 0.741 |
+| BCSD Test 220 px, all (n=29): IoU / F1 | 0.442 / 0.601 | 0.589 / 0.728 |
+| composite score (refs clean) | 0.00 | 1.85 (D 0.163 R 0.227 O 0.174) |
+| composite mixed skilled / random EER | 40.0% / 31.3% | 23.8% / 12.5% |
+| composite INCONCLUSIVE (queries) | 12.6% | 0.2% |
+| composite genuine MATCH / NOMATCH | 2.2% / 79.3% | 9.9% / 30.3% |
+| composite skilled MATCH | 0.0% | 0.1% |
+| EER grey / tint / bcsd_real / clean_lowres | 38.9 / 34.2 / 38.8 / 25.0% | 16.9 / 16.1 / 31.8 / 15.4% |
+| composite, both textured: score, EER | 0.00, 42.4% | 0.52, 29.2% |
+| clearance val | 5.236 | 5.255 (clean sha256 identical; scale_0.5 18.5% -> 16.7%) |
+
+* Caveat: detector threshold, upscale rule and extraction options were compared on val
+  composites and val scale_0.5, so the val rows above are in-sample. Out-of-sample check on
+  cedar55_dev composites (same builder, not used for any choice): score 0.00 -> 2.39, mixed
+  skilled EER 37.6% -> 23.1%, INCONCLUSIVE 11.4% -> 0.3%, grey 33.5 -> 13.8%, tint 30.6 ->
+  13.1%, bcsd_real 40.5 -> 33.2%, clean_lowres 22.7 -> 12.1%, skilled MATCH 0.0%.
+* Review fixes (2026-10-06): upscale capped at 4 Mpx, aspect > 20:1 blocked, gate never raises,
+  sparse-ink fallback (q99.9 when q99.9 > 1.8 x q99), one routing per image in the verifier.
+  Re-measured: clean val 5.255 with the clean block bit-identical to bcd00ac; dev composites
+  unchanged (score 2.394, mixed skilled EER 23.1%, INCONCLUSIVE 0.3%, identical JSON blocks).
+* Remaining gap: bcsd_real (dark printed text, barcodes, rules as dark as ink). Not texture;
+  needs print/ink separation (colour, glyph regularity).
+* Cost: detection ~16 ms per call (runs in the gate and in normalisation).

@@ -6,6 +6,8 @@ All notable changes to this project are documented here, following
 ## [Unreleased]
 
 ### Added
+- Cheque-background ink extraction (`src/preprocessing/background.py`): guilloche / pattern backgrounds are detected and the signature ink is extracted (hysteresis seeded from the darkest strokes, grown to just above the measured texture level); crops narrower than 256 px are upscaled. On cheque composites of the validation set skilled EER 40.0% -> 23.8% and INCONCLUSIVE 12.6% -> 0.2%; clean scans are unchanged (EXP-025).
+- `benchmark/cheque_composite.py` (validation signatures on guilloche, tinted and real cheque backgrounds at ~200 px) and `benchmark/cheque_extraction_iou.py` (ink-mask IoU against BCSD signature masks).
 - Frozen 0-10 clearance score for the 1:1 problem (`benchmark/clearance_score.py`): clean discrimination, 11 deterministic capture conditions and the production operating point, with a forgery-accept safety gate. Final: holdout 4.93 -> 5.78, test 5.26 -> 6.00, validation 3.88 -> 5.24 (see `benchmark/REPORT.md`).
 - 100-run determinism suite (`tests/test_determinism_100.py`): byte-identical JSON over 100 runs on three synthetic pairs and across three fresh interpreters.
 - `.env` runtime configuration (`envfile.py`, `.env.example`) and a `serve.py` launcher that applies it before numpy / OpenCV load; configurable audit ledger paths. Shell variables override the file.
@@ -29,6 +31,7 @@ All notable changes to this project are documented here, following
 - `docs/DETERMINISM.md` and `src/core/determinism.py` (single determinism control point).
 
 ### Changed
+- The signature quality gate measures noise, contrast and ink on the extracted ink layer when the background is textured, so legible cheque crops are no longer rejected as `EXCESSIVE_NOISE`. Texture without separable ink is blocked as `BACKGROUND_NOT_SEPARABLE`. New quality fields `background_texture` and `background_removed`, plus the warnings `TEXTURED_BACKGROUND_REMOVED` and `LOW_RESOLUTION_UPSCALED`.
 - Stroke direction and pressure pattern now keep the better of the specimen->query and query->specimen alignments (symmetric); fusion, thresholds and evidence reference refitted. Dev CV skilled EER 10.58% -> 9.59%; val clean skilled EER 12.5% -> 11.8%, clearance score 5.06 -> 5.24; ~5 ms more per pair (EXP-019).
 - ACCEPT / REVIEW / REJECT thresholds are now selected from writer-disjoint out-of-fold logits (skilled q99.75 / random q99.9 + margin; genuine q5) with a nested held-out check. Single-specimen val genuine auto-match 28.2% -> 36.8%, genuine NOMATCH 8.0% -> 5.1%, skilled MATCH 0.3%; clearance score 4.98 -> 5.06 (EXP-018).
 - Fusion, thresholds and evidence reference refitted on harmonized dev images; the fitting scripts now harmonize by default (`--condition raw` reproduces older fits) (EXP-017).
@@ -39,6 +42,8 @@ All notable changes to this project are documented here, following
 - `is_match` is true only for ACCEPT.
 
 ### Security
+- Signature images above 16 Mpx (`MAX_PROCESS_PIXELS`) are no longer processed: the quality gate blocks them as `IMAGE_DIMENSIONS_UNSUPPORTED` (INCONCLUSIVE) before any float64 working copy is made, so a burst of large in-aspect uploads cannot exhaust memory. `/signature/inspect` now prepares and extracts each image once instead of twice.
+- Low-resolution upscaling is capped at 4 Mpx of output and images with an aspect ratio above 20:1 are not processed (`IMAGE_DIMENSIONS_UNSUPPORTED`), closing a single-request memory-exhaustion path. The signature quality gate no longer raises on preprocessing failures (`PREPROCESSING_FAILED`), and OpenCV errors during normalisation become INCONCLUSIVE without exposing their text.
 - Content-Security-Policy and `X-Content-Type-Options: nosniff` on every response; inspect no longer returns raw exception text.
 - The API no longer reads server filesystem paths supplied by clients.
 - Header-only image-size checks (decompression-bomb guard), request size cap, strict Pydantic input validation, CORS allow-list, and account numbers masked in the audit chain.
