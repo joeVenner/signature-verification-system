@@ -1,8 +1,9 @@
 """1:1 signature comparison plus the real pipeline intermediates, for the live console.
 
-The verdict comes from `compare_signatures` (exactly what `/signature/compare`
-returns). The intermediates are produced by re-running the public, deterministic
-`extract_features` + `compare` with the verifier's own configuration; the
+Each image is prepared, gated and feature-extracted once (`gate_and_extract`);
+the verdict is the verifier's result on those features (exactly what
+`/signature/compare` returns) and the intermediates are rendered from the same
+features. The fusion is re-run with the verifier's own configuration; the
 recomputed log-odds is then checked against the verdict's log-odds and the
 signal breakdown is withheld if they ever disagree, so the console can never
 show a decomposition that does not add up to the decision.
@@ -10,7 +11,6 @@ show a decomposition that does not add up to the decision.
 
 from __future__ import annotations
 
-import logging
 import time
 from typing import Dict, List, Literal, Optional
 
@@ -19,22 +19,26 @@ from pydantic import BaseModel, Field
 
 from signature_verification_system.src.api import visuals
 from signature_verification_system.src.core.config import FUSION_SIGNALS, RepresentationParams
-from signature_verification_system.src.verification.deterministic import DeterministicVerifier
-from signature_verification_system.src.verification.features import SignatureFeatures, extract_features
+from signature_verification_system.src.verification.deterministic import (
+    DeterministicVerifier,
+    GatedSignature,
+    gate_and_extract,
+)
+from signature_verification_system.src.verification.features import SignatureFeatures
 from signature_verification_system.src.verification.signature_compare import (
     SCORE_ACCEPT_ANCHOR,
     SCORE_REJECT_ANCHOR,
     SCORE_TAIL_LOGODDS,
     SignatureComparison,
-    compare_signatures,
+    comparison_from_result,
 )
 from signature_verification_system.src.verification.similarity import PairSimilarity, compare
 
 LOG_ODDS_DECIMALS = 6   # precision of SignatureComparison.log_odds
 SUM_TOLERANCE = 1e-9
 EXTRACTION_FAILED_MESSAGE = "No signature could be isolated in this image."
+QUALITY_BLOCKED_MESSAGE = "Image did not pass the signature quality gate; no intermediates were computed."
 
-LOGGER = logging.getLogger(__name__)
 
 SIGNAL_LABELS: Dict[str, str] = {
     "keypoint": "Keypoint correspondence",
@@ -139,13 +143,17 @@ class SignatureInspection(BaseModel):
     timing: Timing
 
 
-def _features_or_error(image: np.ndarray, verifier: DeterministicVerifier) -> tuple[Optional[SignatureFeatures], Optional[str]]:
-    try:
-        return extract_features(image, verifier.config.representation), None
-    except ValueError:
-        # The exception text is logged, never returned: a future message could expose internals.
-        LOGGER.info("feature extraction failed during inspect", exc_info=True)
+def _features_or_error(gated: GatedSignature) -> tuple[Optional[SignatureFeatures], Optional[str]]:
+    """Features for the visuals, only for images the quality gate lets through (same rule as verify).
+
+    Extraction error texts are logged by `gate_and_extract`, never returned: a
+    message could expose internals.
+    """
+    if not gated.quality.passed:
+        return None, QUALITY_BLOCKED_MESSAGE
+    if gated.features is None:
         return None, EXTRACTION_FAILED_MESSAGE
+    return gated.features, None
 
 
 def inspect_image(image: np.ndarray, feats: Optional[SignatureFeatures], error: Optional[str],
@@ -240,12 +248,13 @@ def inspect_signatures(reference: np.ndarray, questioned: np.ndarray,
                        verifier: DeterministicVerifier) -> SignatureInspection:
     """Verdict plus every intermediate of one 1:1 comparison."""
     start = time.perf_counter()
-    comparison = compare_signatures([reference], questioned, verifier)
+    p = verifier.config.representation
+    ref_gated, que_gated = gate_and_extract(reference, p), gate_and_extract(questioned, p)
+    comparison = comparison_from_result(verifier.verify_gated(ref_gated, que_gated), verifier, 1)
     compared = time.perf_counter()
 
-    p = verifier.config.representation
-    ref_feats, ref_err = _features_or_error(reference, verifier)
-    que_feats, que_err = _features_or_error(questioned, verifier)
+    ref_feats, ref_err = _features_or_error(ref_gated)
+    que_feats, que_err = _features_or_error(que_gated)
     ref_view = inspect_image(reference, ref_feats, ref_err, p)
     que_view = inspect_image(questioned, que_feats, que_err, p)
 

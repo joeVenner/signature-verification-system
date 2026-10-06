@@ -226,5 +226,191 @@ class SamplesEndpointTest(unittest.TestCase):
         self.assertIsNone(load_catalog(None))
 
 
+
+class InspectQualityGateTest(unittest.TestCase):
+    """/inspect must not run feature extraction on images the quality gate blocks."""
+
+    def test_over_aspect_image_returns_promptly_without_extraction(self):
+        import time
+
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.verification.deterministic import DeterministicVerifier
+
+        wide = np.full((16, 400_000, 3), 240, np.uint8)
+        wide[4:12, 1000:5000] = 30
+        reference = synthetic_signature(1)
+        start = time.perf_counter()
+        from signature_verification_system.src.verification import deterministic
+
+        with unittest.mock.patch.object(deterministic, "extract_features", wraps=deterministic.extract_features) as spy:
+            result = inspection.inspect_signatures(reference, wide, DeterministicVerifier())
+        self.assertLess(time.perf_counter() - start, 20.0)
+        self.assertEqual(result.comparison.band, "INCONCLUSIVE")
+        self.assertEqual(result.questioned.error, inspection.QUALITY_BLOCKED_MESSAGE)
+        self.assertIsNone(result.questioned.harmonised_png)
+        self.assertEqual(spy.call_count, 1)        # the reference only
+
+
+class PixelCapTest(unittest.TestCase):
+    """Images above background.MAX_PROCESS_PIXELS are blocked by the gate: INCONCLUSIVE, never a 500."""
+
+    @classmethod
+    def setUpClass(cls):
+        from signature_verification_system.src.preprocessing.background import MAX_PROCESS_PIXELS
+
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.client = TestClient(create_app(audit_logger=_logger(cls.tmp.name, "audit"), samples=None))
+        side = int(MAX_PROCESS_PIXELS ** 0.5)
+        huge = np.full((side, MAX_PROCESS_PIXELS // side + 1), 240, np.uint8)
+        huge[side // 2 - 30:side // 2 + 30, 500:3500] = 30
+        assert huge.size > MAX_PROCESS_PIXELS
+        cls.huge = to_b64(huge)
+        cls.ref = to_b64(synthetic_signature(1))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_verify_endpoint_blocks_over_cap(self):
+        r = self.client.post("/api/v1/verify", json={"ref_image": self.ref, "test_image": self.huge})
+        self.assertEqual(r.status_code, 200, r.text)
+        v = r.json()["verification"]
+        self.assertEqual(v["decision_band"], "INCONCLUSIVE")
+        self.assertEqual(v["quality"]["questioned"]["blocking_issues"], ["IMAGE_DIMENSIONS_UNSUPPORTED"])
+
+    def test_inspect_endpoint_blocks_over_cap(self):
+        r = self.client.post("/api/v1/signature/inspect",
+                             json={"reference_images": [self.ref], "questioned_image": self.huge})
+        self.assertEqual(r.status_code, 200, r.text)
+        payload = r.json()
+        self.assertEqual(payload["comparison"]["band"], "INCONCLUSIVE")
+        self.assertEqual(payload["questioned"]["error"], "Image did not pass the signature quality gate; "
+                                                         "no intermediates were computed.")
+        self.assertIsNone(payload["questioned"]["harmonised_png"])
+
+    def test_at_cap_is_scored_and_one_more_column_is_blocked(self):
+        from signature_verification_system.src.preprocessing import background
+        from signature_verification_system.src.verification.deterministic import DeterministicVerifier
+
+        ref, que = synthetic_signature(1), synthetic_signature(7)
+        wider = np.pad(que, ((0, 0), (0, 1), (0, 0)), mode="edge")
+        with unittest.mock.patch.object(background, "MAX_PROCESS_PIXELS", que.shape[0] * que.shape[1]):
+            at_cap = DeterministicVerifier().verify(ref, que)
+            over = DeterministicVerifier().verify(ref, wider)
+        self.assertNotEqual(at_cap.decision_band, "INCONCLUSIVE")
+        self.assertEqual(over.decision_band, "INCONCLUSIVE")
+        self.assertEqual(over.quality["questioned"]["blocking_issues"], ["IMAGE_DIMENSIONS_UNSUPPORTED"])
+
+
+class InspectSinglePassTest(unittest.TestCase):
+    """/inspect prepares and extracts each image once, shared by the verdict and the visuals."""
+
+    def test_each_image_prepared_and_extracted_once(self):
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.preprocessing import normalization, quality
+        from signature_verification_system.src.verification import deterministic
+        from signature_verification_system.src.verification.signature_compare import compare_signatures
+
+        verifier = deterministic.DeterministicVerifier()
+        ref, que = synthetic_signature(1), synthetic_signature(7)
+        with unittest.mock.patch.object(deterministic, "extract_features",
+                                        wraps=deterministic.extract_features) as extract, \
+                unittest.mock.patch.object(normalization, "prepare_signature",
+                                           wraps=normalization.prepare_signature) as prep_norm, \
+                unittest.mock.patch.object(quality, "prepare_signature", wraps=quality.prepare_signature) as prep_q:
+            result = inspection.inspect_signatures(ref, que, verifier)
+        self.assertEqual(extract.call_count, 2)
+        self.assertEqual(prep_norm.call_count + prep_q.call_count, 2)
+        self.assertNotEqual(result.comparison.band, "INCONCLUSIVE")
+        self.assertIsNotNone(result.fusion)
+        # The verdict is exactly what /signature/compare returns for the same pair.
+        self.assertEqual(result.comparison, compare_signatures([ref], que, verifier))
+
+
+class ExtractionErrorTest(unittest.TestCase):
+    """OpenCV failures inside feature extraction give fixed messages, never a 500 or the error text."""
+
+    @staticmethod
+    def _boom(*_args, **_kwargs):
+        raise cv2.error("secret internal detail")
+
+    def test_inspect_endpoint_and_verifier(self):
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.verification import deterministic
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        client = TestClient(create_app(audit_logger=_logger(tmp.name, "audit"), samples=None))
+        body = {"reference_images": [to_b64(synthetic_signature(1))], "questioned_image": to_b64(synthetic_signature(7))}
+        with unittest.mock.patch.object(deterministic, "extract_features", self._boom):
+            r = client.post("/api/v1/signature/inspect", json=body)
+            ref, que = synthetic_signature(1), synthetic_signature(7)
+            single = deterministic.DeterministicVerifier().verify(ref, que)
+            multi = deterministic.DeterministicVerifier().verify_against_references([ref, ref], que)
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertNotIn("secret internal detail", r.text)
+        payload = r.json()
+        self.assertEqual(payload["comparison"]["band"], "INCONCLUSIVE")
+        self.assertEqual(payload["questioned"]["error"], inspection.EXTRACTION_FAILED_MESSAGE)
+        for result in (single, multi):
+            self.assertEqual(result.decision_band, "INCONCLUSIVE")
+            self.assertNotIn("secret internal detail", result.model_dump_json())
+            self.assertIn(deterministic.EXTRACTION_ERROR_REASON, result.notes[0])
+
+class ExtractionInternalErrorHttpTest(unittest.TestCase):
+    """cv2.error / MemoryError in extraction: fixed INCONCLUSIVE text over HTTP, never the internal text."""
+
+    SECRET = "secret internal allocator detail"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.client = TestClient(create_app(audit_logger=_logger(cls.tmp.name, "audit"), samples=None))
+        cls.ref, cls.que = to_b64(synthetic_signature(1)), to_b64(synthetic_signature(7))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def _post_all(self, exc: BaseException) -> dict:
+        from signature_verification_system.src.verification import deterministic
+
+        def boom(*_args, **_kwargs):
+            raise exc
+
+        with unittest.mock.patch.object(deterministic, "extract_features", boom):
+            return {
+                "verify": self.client.post("/api/v1/verify", json={"ref_image": self.ref, "test_image": self.que}),
+                "verify_multi": self.client.post("/api/v1/signature/compare", json={
+                    "reference_images": [self.ref, self.ref], "questioned_image": self.que}),
+                "inspect": self.client.post("/api/v1/signature/inspect", json={
+                    "reference_images": [self.ref], "questioned_image": self.que}),
+            }
+
+    def test_internal_errors_map_to_fixed_text(self):
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.verification import deterministic
+
+        reason = deterministic.EXTRACTION_ERROR_REASON
+        self.assertEqual(reason, "feature extraction failed")
+        for exc in (cv2.error(self.SECRET), MemoryError(self.SECRET)):
+            with self.subTest(error=type(exc).__name__):
+                responses = self._post_all(exc)
+                for name, r in responses.items():
+                    self.assertEqual(r.status_code, 200, f"{name}: {r.text}")
+                    self.assertNotIn(self.SECRET, r.text, name)
+                verification = responses["verify"].json()["verification"]
+                self.assertEqual(verification["decision_band"], "INCONCLUSIVE")
+                self.assertEqual(verification["notes"][0], f"INCONCLUSIVE: {reason}.")
+                multi = responses["verify_multi"].json()
+                self.assertEqual(multi["band"], "INCONCLUSIVE")
+                self.assertEqual(multi["notes"][0], f"INCONCLUSIVE: questioned image: {reason}.")
+                inspected = responses["inspect"].json()
+                self.assertEqual(inspected["comparison"]["band"], "INCONCLUSIVE")
+                self.assertEqual(inspected["comparison"]["notes"][0], f"INCONCLUSIVE: {reason}.")
+                self.assertEqual(inspected["reference"]["error"], inspection.EXTRACTION_FAILED_MESSAGE)
+                self.assertEqual(inspected["questioned"]["error"], inspection.EXTRACTION_FAILED_MESSAGE)
+
+
 if __name__ == "__main__":
     unittest.main()
