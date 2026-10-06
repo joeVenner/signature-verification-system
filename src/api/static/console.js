@@ -429,9 +429,10 @@
         'Normalised ink crop')));
 
     stages.push(stage(3, 'Stroke representation',
-      'Stroke centre-lines (skeleton) and local keypoints on the shared comparison canvas.',
+      'Stroke centre-lines (skeleton) and the local keypoints centred on a stroke, on the shared comparison canvas. Coarse-scale keypoints centred off the strokes are counted but not drawn.',
       [pairFigures(data, 'strokes_png',
         (img) => (img.stats ? [kv('skeleton pts', String(img.stats.skeleton_points)), kv('keypoints', String(img.stats.keypoints)),
+          kv('off-stroke, not drawn', img.stats.keypoints_off_stroke == null ? 'n/a' : String(img.stats.keypoints_off_stroke)),
           kv('pen width', `${fmt(img.stats.stroke_width_px, 2)} px`)] : []),
         'Skeleton and keypoints'),
       el('div', { class: 'legend' }, [
