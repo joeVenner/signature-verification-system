@@ -25,8 +25,8 @@ import hashlib
 import logging
 import threading
 from collections import OrderedDict
-from dataclasses import dataclass
-from typing import Optional, Tuple
+from dataclasses import dataclass, fields, is_dataclass
+from typing import Iterator, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -189,12 +189,38 @@ def extract_features(
     return _describe(norm, source, widths, p)
 
 
-# Benchmarks compare one reference with many low-resolution queries, which asks for the
-# same (image, factor) re-extraction repeatedly. Bounded (LRU), keyed by image content,
-# factor and parameters, so a result never depends on whether an entry was cached.
+# Benchmarks compare one reference with many low-resolution queries, and `verify` scores a
+# pair more than once, which asks for the same (image, factor) re-extraction repeatedly.
+# Bounded (LRU, entry count and bytes), keyed by image content, factor and parameters, so
+# a result never depends on whether an entry was cached. A typical CEDAR-size entry is
+# ~0.75 MB; very large inputs are bounded by the byte budget (an entry above it is not kept).
 _COARSE_CACHE_SIZE = 32
-_coarse_cache: "OrderedDict[tuple, SignatureFeatures]" = OrderedDict()
+_COARSE_CACHE_MAX_BYTES = 64 * 1024 * 1024
+_coarse_cache: "OrderedDict[tuple, Tuple[SignatureFeatures, int]]" = OrderedDict()
+_coarse_cache_bytes = 0
 _coarse_lock = threading.Lock()
+
+
+def _arrays(obj: object) -> Iterator[np.ndarray]:
+    """Every numpy array held by a features dataclass tree (cached entries hold no other containers)."""
+    if isinstance(obj, np.ndarray):
+        yield obj
+    elif is_dataclass(obj):
+        for f in fields(obj):
+            yield from _arrays(getattr(obj, f.name))
+
+
+def _freeze(features: SignatureFeatures) -> int:
+    """Make a cached entry's arrays read-only (it is shared between callers); returns its byte size.
+
+    Views count their whole base, which is what they keep alive.
+    """
+    owners = {}
+    for array in _arrays(features):
+        array.flags.writeable = False
+        owner = array.base if isinstance(array.base, np.ndarray) else array
+        owners[id(owner)] = owner.nbytes
+    return sum(owners.values())
 
 
 def _coarser(features: SignatureFeatures, factor: float, p: RepresentationParams) -> SignatureFeatures:
@@ -203,21 +229,37 @@ def _coarser(features: SignatureFeatures, factor: float, p: RepresentationParams
     The downsampled image goes through the normal preparation path
     (`normalize_signature` -> `prepare_signature`), so every routing rule and the
     pixel cap apply; it is never larger than an image that already passed them.
+    The result is shared through the cache, so its arrays are read-only.
     """
+    global _coarse_cache_bytes
     image = features.source_image
     key = (hashlib.sha256(image.tobytes()).hexdigest(), image.shape, str(image.dtype), factor, p.model_dump_json())
     with _coarse_lock:
         if key in _coarse_cache:
             _coarse_cache.move_to_end(key)
-            return _coarse_cache[key]
+            return _coarse_cache[key][0]
     source = downsample(image, factor)
     norm = normalize_signature(source)
     result = _describe(norm, source, _measure(norm, source), p)
+    size = _freeze(result)
+    if size > _COARSE_CACHE_MAX_BYTES:
+        return result
     with _coarse_lock:
-        _coarse_cache[key] = result
-        while len(_coarse_cache) > _COARSE_CACHE_SIZE:
-            _coarse_cache.popitem(last=False)
+        if key not in _coarse_cache:
+            _coarse_cache[key] = (result, size)
+            _coarse_cache_bytes += size
+        while len(_coarse_cache) > _COARSE_CACHE_SIZE or _coarse_cache_bytes > _COARSE_CACHE_MAX_BYTES:
+            _, (_, evicted) = _coarse_cache.popitem(last=False)
+            _coarse_cache_bytes -= evicted
     return result
+
+
+def _clear_coarse_cache() -> None:
+    """Empty the re-extraction cache (tests and benchmarks)."""
+    global _coarse_cache_bytes
+    with _coarse_lock:
+        _coarse_cache.clear()
+        _coarse_cache_bytes = 0
 
 
 def match_capture_scale(

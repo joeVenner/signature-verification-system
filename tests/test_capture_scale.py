@@ -149,16 +149,16 @@ class ExtractionTest(unittest.TestCase):
 
     def test_compare_is_deterministic_and_cache_independent(self):
         first = compare(self.f_native, self.f_coarse).fused_logit
-        features._coarse_cache.clear()
+        features._clear_coarse_cache()
         second = compare(self.f_native, self.f_coarse).fused_logit
         third = compare(self.f_native, self.f_coarse).fused_logit
         self.assertEqual(first, second)
         self.assertEqual(second, third)
 
     def test_repeated_matching_is_deterministic(self):
-        features._coarse_cache.clear()
+        features._clear_coarse_cache()
         runs = [match_capture_scale(self.f_native, self.f_coarse)[0] for _ in range(3)]
-        features._coarse_cache.clear()
+        features._clear_coarse_cache()
         runs.append(match_capture_scale(self.f_native, self.f_coarse)[0])
         for other in runs[1:]:
             np.testing.assert_array_equal(other.source_image, runs[0].source_image)
@@ -170,20 +170,54 @@ class ExtractionTest(unittest.TestCase):
         from signature_verification_system.src.core.config import DEFAULT_CONFIG
 
         p = DEFAULT_CONFIG.representation
-        saved = features._COARSE_CACHE_SIZE
-        features._coarse_cache.clear()
-        features._COARSE_CACHE_SIZE = 2
+        features._clear_coarse_cache()
+        with unittest.mock.patch.object(features, "_COARSE_CACHE_SIZE", 2):
+            try:
+                for factor in (0.9, 0.8, 0.7):
+                    features._coarser(self.f_native, factor, p)
+                self.assertEqual(len(features._coarse_cache), 2)
+                self.assertEqual([key[3] for key in features._coarse_cache], [0.8, 0.7])   # oldest evicted
+                hit = features._coarser(self.f_native, 0.8, p)
+                self.assertIs(hit, features._coarser(self.f_native, 0.8, p))
+                self.assertEqual([key[3] for key in features._coarse_cache], [0.7, 0.8])   # hit refreshed
+                self.assertEqual(features._coarse_cache_bytes,
+                                 sum(size for _, size in features._coarse_cache.values()))
+            finally:
+                features._clear_coarse_cache()
+
+    def test_coarse_cache_respects_the_byte_budget(self):
+        from signature_verification_system.src.core.config import DEFAULT_CONFIG
+
+        p = DEFAULT_CONFIG.representation
+        features._clear_coarse_cache()
         try:
-            for factor in (0.9, 0.8, 0.7):
-                features._coarser(self.f_native, factor, p)
-            self.assertEqual(len(features._coarse_cache), 2)
-            self.assertEqual([key[3] for key in features._coarse_cache], [0.8, 0.7])   # oldest evicted
-            hit = features._coarser(self.f_native, 0.8, p)
-            self.assertIs(hit, features._coarser(self.f_native, 0.8, p))
-            self.assertEqual([key[3] for key in features._coarse_cache], [0.7, 0.8])   # hit refreshed
+            one = features._coarser(self.f_native, 0.9, p)
+            size = features._coarse_cache_bytes
+            self.assertGreater(size, 0)
+            features._clear_coarse_cache()
+            with unittest.mock.patch.object(features, "_COARSE_CACHE_MAX_BYTES", size + size // 2):
+                features._coarser(self.f_native, 0.9, p)
+                features._coarser(self.f_native, 0.8, p)
+                self.assertEqual(len(features._coarse_cache), 1)                     # budget fits one entry
+                self.assertLessEqual(features._coarse_cache_bytes, size + size // 2)
+            features._clear_coarse_cache()
+            with unittest.mock.patch.object(features, "_COARSE_CACHE_MAX_BYTES", size - 1):
+                again = features._coarser(self.f_native, 0.9, p)                   # too big: not kept
+                self.assertEqual(len(features._coarse_cache), 0)
+            np.testing.assert_array_equal(again.shape_descriptor, one.shape_descriptor)
         finally:
-            features._COARSE_CACHE_SIZE = saved
-            features._coarse_cache.clear()
+            features._clear_coarse_cache()
+
+    def test_cached_entries_are_read_only(self):
+        from signature_verification_system.src.core.config import DEFAULT_CONFIG
+
+        entry = features._coarser(self.f_native, 0.7, DEFAULT_CONFIG.representation)
+        for array in (entry.source_image, entry.normalized.ink, entry.shape_descriptor, entry.keypoints,
+                      entry.stroke.orientations):
+            with self.assertRaises(ValueError):
+                array[...] = 0
+        self.assertTrue(self.f_native.source_image.flags.writeable)               # caller's input untouched
+
 
 def _unmatched(a, b):
     """compare() on the unmatched path (no source image, so matching cannot run)."""
