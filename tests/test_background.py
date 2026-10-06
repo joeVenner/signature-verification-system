@@ -13,6 +13,7 @@ from signature_verification_system.src.preprocessing.background import (
     TEXTURED_MIN_FRACTION,
     LOWRES_MAX_WIDTH,
     LOWRES_TARGET_WIDTH,
+    MAX_PROCESS_PIXELS,
     MAX_WORK_PIXELS,
     extract_ink_layer,
     measure_background_texture,
@@ -175,6 +176,43 @@ class TestDimensionLimits(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsupported image dimensions"):
             normalize_signature(img)
         self.assertLess(time.perf_counter() - start, 2.0)
+
+    def test_over_pixel_cap_is_refused_before_any_processing(self):
+        import time
+
+        side = int(MAX_PROCESS_PIXELS ** 0.5)
+        img = np.full((side, MAX_PROCESS_PIXELS // side + 1), 240, np.uint8)   # 1 row of pixels over the cap
+        img[side // 2 - 20:side // 2 + 20, 500:3000] = 30
+        self.assertGreater(img.size, MAX_PROCESS_PIXELS)
+        start = time.perf_counter()
+        prepared = prepare_signature(img, img)
+        q = assess_signature_quality(img)
+        with self.assertRaisesRegex(ValueError, "Unsupported image dimensions"):
+            normalize_signature(img)
+        self.assertLess(time.perf_counter() - start, 5.0)
+        self.assertFalse(prepared.dimensions_supported)
+        self.assertIs(prepared.work_image, img)
+        self.assertFalse(q.passed)
+        self.assertEqual(q.blocking_issues, ["IMAGE_DIMENSIONS_UNSUPPORTED"])
+
+    def test_thin_strip_over_pixel_cap_does_not_bypass_it(self):
+        # Shorter side < MIN_SIDE_PX returns early as "supported"; the pixel cap must come first.
+        img = np.full((15, MAX_PROCESS_PIXELS // 15 + 1), 240, np.uint8)
+        img[4:11, 1000:5000] = 30
+        self.assertFalse(prepare_signature(img, img).dimensions_supported)
+        self.assertEqual(assess_signature_quality(img).blocking_issues, ["IMAGE_DIMENSIONS_UNSUPPORTED"])
+
+    def test_pixel_cap_boundary(self):
+        from unittest import mock
+
+        from signature_verification_system.src.preprocessing import background
+
+        img = np.full((100, 300), 240, np.uint8)
+        img[40:60, 50:250] = 30
+        with mock.patch.object(background, "MAX_PROCESS_PIXELS", img.size):
+            self.assertTrue(prepare_signature(img, img).dimensions_supported)
+            wider = np.pad(img, ((0, 0), (0, 1)), mode="edge")
+            self.assertFalse(prepare_signature(wider, wider).dimensions_supported)
 
     def test_upscale_never_exceeds_the_work_pixel_cap(self):
         for h, w in ((16, 255), (300, 255), (4000, 250), (16, 3_000_000)):

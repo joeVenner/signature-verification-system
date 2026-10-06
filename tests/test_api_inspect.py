@@ -245,6 +245,57 @@ class InspectQualityGateTest(unittest.TestCase):
         self.assertEqual(spy.call_count, 1)        # the reference only
 
 
+class PixelCapTest(unittest.TestCase):
+    """Images above background.MAX_PROCESS_PIXELS are blocked by the gate: INCONCLUSIVE, never a 500."""
+
+    @classmethod
+    def setUpClass(cls):
+        from signature_verification_system.src.preprocessing.background import MAX_PROCESS_PIXELS
+
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.client = TestClient(create_app(audit_logger=_logger(cls.tmp.name, "audit"), samples=None))
+        side = int(MAX_PROCESS_PIXELS ** 0.5)
+        huge = np.full((side, MAX_PROCESS_PIXELS // side + 1), 240, np.uint8)
+        huge[side // 2 - 30:side // 2 + 30, 500:3500] = 30
+        assert huge.size > MAX_PROCESS_PIXELS
+        cls.huge = to_b64(huge)
+        cls.ref = to_b64(synthetic_signature(1))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_verify_endpoint_blocks_over_cap(self):
+        r = self.client.post("/api/v1/verify", json={"ref_image": self.ref, "test_image": self.huge})
+        self.assertEqual(r.status_code, 200, r.text)
+        v = r.json()["verification"]
+        self.assertEqual(v["decision_band"], "INCONCLUSIVE")
+        self.assertEqual(v["quality"]["questioned"]["blocking_issues"], ["IMAGE_DIMENSIONS_UNSUPPORTED"])
+
+    def test_inspect_endpoint_blocks_over_cap(self):
+        r = self.client.post("/api/v1/signature/inspect",
+                             json={"reference_images": [self.ref], "questioned_image": self.huge})
+        self.assertEqual(r.status_code, 200, r.text)
+        payload = r.json()
+        self.assertEqual(payload["comparison"]["band"], "INCONCLUSIVE")
+        self.assertEqual(payload["questioned"]["error"], "Image did not pass the signature quality gate; "
+                                                         "no intermediates were computed.")
+        self.assertIsNone(payload["questioned"]["harmonised_png"])
+
+    def test_at_cap_is_scored_and_one_more_column_is_blocked(self):
+        from signature_verification_system.src.preprocessing import background
+        from signature_verification_system.src.verification.deterministic import DeterministicVerifier
+
+        ref, que = synthetic_signature(1), synthetic_signature(7)
+        wider = np.pad(que, ((0, 0), (0, 1), (0, 0)), mode="edge")
+        with unittest.mock.patch.object(background, "MAX_PROCESS_PIXELS", que.shape[0] * que.shape[1]):
+            at_cap = DeterministicVerifier().verify(ref, que)
+            over = DeterministicVerifier().verify(ref, wider)
+        self.assertNotEqual(at_cap.decision_band, "INCONCLUSIVE")
+        self.assertEqual(over.decision_band, "INCONCLUSIVE")
+        self.assertEqual(over.quality["questioned"]["blocking_issues"], ["IMAGE_DIMENSIONS_UNSUPPORTED"])
+
+
 class ExtractionErrorTest(unittest.TestCase):
     """OpenCV failures inside feature extraction give fixed messages, never a 500 or the error text."""
 

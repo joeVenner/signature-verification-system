@@ -20,6 +20,9 @@ built for (benchmark/experiments.md EXP-025):
   just above the measured texture level; ink keeps its own darkness (the
   pressure signals read it) on white paper;
 * width below LOWRES_MAX_WIDTH -> bicubic upscale (textured or not);
+* more than MAX_PROCESS_PIXELS pixels or an aspect ratio above
+  MAX_ASPECT_RATIO -> nothing is done and `dimensions_supported` is False
+  (the quality gate blocks it, so the result is INCONCLUSIVE);
 * anything else -> the input object itself, so clean full-size scans are
   bit-identical to the pre-existing path.
 
@@ -84,6 +87,13 @@ MIN_SIDE_PX = 16               # smaller inputs are left to the quality gate
 # Longest / shortest side. Real crops: BCSD max 6.3 (signature boxes 7.2),
 # CEDAR max 4.1. Beyond this the image is not processed (gate blocks it).
 MAX_ASPECT_RATIO = 20.0
+# Input pixels above which an image is not processed (gate blocks it). Routing,
+# the quality gate and normalisation each hold several float64 copies of the
+# image (8 bytes/px), so at the 50 Mpx decode limit one request needs GBs.
+# Real crops are far smaller (BCSD/CEDAR < 1 Mpx, a full 300 dpi cheque ~3 Mpx).
+# Refused rather than downscaled: there is no downscale route, and refusing
+# keeps every processed image on the same reproducible path.
+MAX_PROCESS_PIXELS = 16_000_000
 
 
 @dataclass(frozen=True)
@@ -105,7 +115,7 @@ class PreparedSignature:
     upscale: float                 # work / input linear scale (1.0 = unchanged)
     background_removed: bool       # textured route applied
     separable: bool                # False: textured, but no signature could be separated
-    dimensions_supported: bool = True  # False: aspect ratio above MAX_ASPECT_RATIO, nothing done
+    dimensions_supported: bool = True  # False: above MAX_PROCESS_PIXELS or MAX_ASPECT_RATIO, nothing done
 
 
 def _odd(x: float) -> int:
@@ -243,6 +253,10 @@ def prepare_signature(image: np.ndarray, gray: np.ndarray) -> PreparedSignature:
         (sizes in `upscale` x input pixels); `gate_image` is at input resolution.
     """
     h, w = gray.shape[:2]
+    # First: the small-side early return below must not let a huge thin strip through.
+    if h * w > MAX_PROCESS_PIXELS:
+        return PreparedSignature(image, image, TextureReport(0.0, 0.0, False), 1.0, False, True,
+                                 dimensions_supported=False)
     if min(h, w) < MIN_SIDE_PX:
         return PreparedSignature(image, image, TextureReport(0.0, 0.0, False), 1.0, False, True)
     if max(h, w) > MAX_ASPECT_RATIO * min(h, w):
