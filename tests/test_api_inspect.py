@@ -164,6 +164,15 @@ class InspectEndpointTest(unittest.TestCase):
         self.assertIn("text/html", r.headers["content-type"])
         self.assertEqual(self.client.get("/health").status_code, 200)
 
+    def test_console_renders_routing_fields_as_text(self):
+        r = self.client.get("/console.js")
+        self.assertEqual(r.status_code, 200)
+        script = r.text
+        for field in ("capture_scale", "blocking_issues", "background_removed", "processing_scale"):
+            self.assertIn(field, script)
+        self.assertNotIn("innerHTML", script)
+        self.assertNotIn("insertAdjacentHTML", script)
+
 
 class SamplesEndpointTest(unittest.TestCase):
     @classmethod
@@ -247,6 +256,8 @@ class InspectQualityGateTest(unittest.TestCase):
         self.assertLess(time.perf_counter() - start, 20.0)
         self.assertEqual(result.comparison.band, "INCONCLUSIVE")
         self.assertEqual(result.questioned.error, inspection.QUALITY_BLOCKED_MESSAGE)
+        self.assertEqual([f.code for f in result.questioned.quality.blocking_issues], ["IMAGE_DIMENSIONS_UNSUPPORTED"])
+        self.assertIn("20:1", result.questioned.quality.blocking_issues[0].message)
         self.assertIsNone(result.questioned.harmonised_png)
         self.assertEqual(spy.call_count, 1)        # the reference only
 
@@ -410,6 +421,90 @@ class ExtractionInternalErrorHttpTest(unittest.TestCase):
                 self.assertEqual(inspected["comparison"]["notes"][0], f"INCONCLUSIVE: {reason}.")
                 self.assertEqual(inspected["reference"]["error"], inspection.EXTRACTION_FAILED_MESSAGE)
                 self.assertEqual(inspected["questioned"]["error"], inspection.EXTRACTION_FAILED_MESSAGE)
+
+
+class QualityMessagesTest(unittest.TestCase):
+    """Every gate code the API can return has plain-language text for the console."""
+
+    def test_every_code_in_quality_module_has_a_message(self):
+        import re
+
+        from signature_verification_system.src.preprocessing import quality
+
+        source = Path(quality.__file__).read_text()
+        codes = set(re.findall(r'(?:_blocked|append)\("([A-Z_]+)"', source))
+        self.assertGreaterEqual(len(codes), 14)   # the regex must actually find the codes
+        self.assertEqual(codes - set(quality.QUALITY_MESSAGES), set())
+        self.assertTrue(quality.quality_message("NOT_A_CODE"))
+
+    def test_blank_image_reports_messages_per_image(self):
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.verification.deterministic import DeterministicVerifier
+
+        blank = np.full((180, 420, 3), 245, np.uint8)
+        result = inspection.inspect_signatures(synthetic_signature(1), blank, DeterministicVerifier())
+        self.assertTrue(result.reference.quality.passed)
+        self.assertFalse(result.questioned.quality.passed)
+        issues = result.questioned.quality.blocking_issues
+        self.assertTrue(issues)
+        for finding in issues:
+            self.assertNotEqual(finding.message, finding.code)
+            self.assertTrue(finding.message)
+
+
+class InspectRoutingTest(unittest.TestCase):
+    """Cheque-background routing and capture-scale matching are visible in /inspect; scores unchanged."""
+
+    @classmethod
+    def setUpClass(cls):
+        from signature_verification_system.src.verification.deterministic import DeterministicVerifier
+
+        cls.verifier = DeterministicVerifier()
+
+    def test_textured_low_resolution_reference_is_reported(self):
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.tests.test_background import signature
+
+        cheque, _ = signature(textured=True, width=208)
+        result = inspection.inspect_signatures(cheque, synthetic_signature(1), self.verifier)
+        q = result.reference.quality
+        self.assertTrue(q.passed)
+        self.assertTrue(q.background_removed)
+        self.assertGreater(q.background_texture, 0.0)
+        codes = [w.code for w in q.warnings]
+        self.assertIn("TEXTURED_BACKGROUND_REMOVED", codes)
+        self.assertIn("LOW_RESOLUTION_UPSCALED", codes)
+        self.assertGreater(result.reference.processing_scale, 1.0)
+        self.assertEqual(result.questioned.processing_scale, 1.0)
+        self.assertFalse(result.questioned.quality.background_removed)
+
+    def test_capture_scale_match_reported_without_changing_scores(self):
+        from signature_verification_system.src.api import inspection
+        from signature_verification_system.src.verification.features import capture_scale_plan, extract_features
+        from signature_verification_system.src.verification.signature_compare import compare_signatures
+
+        reference = synthetic_signature(1)
+        coarse = cv2.resize(reference, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
+        plan = capture_scale_plan(extract_features(reference), extract_features(coarse))
+        self.assertIsNotNone(plan)   # the fixture must trigger matching, or the test is vacuous
+        self.assertTrue(plan[0])
+        result = inspection.inspect_signatures(reference, coarse, self.verifier)
+        self.assertNotEqual(result.comparison.band, "INCONCLUSIVE")
+        match = result.capture_scale
+        self.assertIsNotNone(match)
+        self.assertEqual(match.downsampled, "reference")
+        self.assertEqual(match.factor, plan[1])
+        self.assertIn(f"×{plan[1]:.2f}", match.statement)
+        self.assertNotEqual(match.scored_stroke_width_px, result.reference.stats.stroke_width_px)
+        self.assertEqual(result.comparison, compare_signatures([reference], coarse, self.verifier))
+
+    def test_clean_pair_has_no_capture_scale_match(self):
+        from signature_verification_system.src.api import inspection
+
+        result = inspection.inspect_signatures(synthetic_signature(1), synthetic_signature(7), self.verifier)
+        self.assertNotEqual(result.comparison.band, "INCONCLUSIVE")
+        self.assertIsNone(result.capture_scale)
+        self.assertEqual(result.reference.processing_scale, 1.0)
 
 
 if __name__ == "__main__":

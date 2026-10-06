@@ -262,6 +262,20 @@ def _clear_coarse_cache() -> None:
         _coarse_cache_bytes = 0
 
 
+def capture_scale_plan(a: SignatureFeatures, b: SignatureFeatures) -> Optional[Tuple[bool, float]]:
+    """(a is the finer image, downsampling factor for it), or None when the pair needs no matching.
+
+    The single decision `match_capture_scale` acts on; also read by the inspect view
+    to report what the comparison did.
+    """
+    if a.source_image is None or b.source_image is None:
+        return None
+    a_is_finer = a.ink_width_px > b.ink_width_px
+    fine, coarse = (a, b) if a_is_finer else (b, a)
+    factor = pair_factor(fine.ink_width_px, fine.work_scale, coarse.ink_width_px, coarse.work_scale)
+    return None if factor is None else (a_is_finer, factor)
+
+
 def match_capture_scale(
     a: SignatureFeatures, b: SignatureFeatures, params: Optional[RepresentationParams] = None
 ) -> Tuple[SignatureFeatures, SignatureFeatures]:
@@ -273,14 +287,12 @@ def match_capture_scale(
     fails (no ink left, an OpenCV error, out of memory), the original features are
     kept: matching is an accuracy aid, never a reason to fail.
     """
-    if a.source_image is None or b.source_image is None:
+    plan = capture_scale_plan(a, b)
+    if plan is None:
         return a, b
+    a_is_finer, factor = plan
+    fine = a if a_is_finer else b
     p = params or DEFAULT_CONFIG.representation
-    a_is_finer = a.ink_width_px > b.ink_width_px
-    fine, coarse = (a, b) if a_is_finer else (b, a)
-    factor = pair_factor(fine.ink_width_px, fine.work_scale, coarse.ink_width_px, coarse.work_scale)
-    if factor is None:
-        return a, b
     try:
         matched = _coarser(fine, factor, p)
     except _RESAMPLE_ERRORS:

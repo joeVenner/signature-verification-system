@@ -19,12 +19,17 @@ from pydantic import BaseModel, Field
 
 from signature_verification_system.src.api import visuals
 from signature_verification_system.src.core.config import FUSION_SIGNALS, RepresentationParams
+from signature_verification_system.src.preprocessing.quality import SignatureQuality, quality_message
 from signature_verification_system.src.verification.deterministic import (
     DeterministicVerifier,
     GatedSignature,
     gate_and_extract,
 )
-from signature_verification_system.src.verification.features import SignatureFeatures
+from signature_verification_system.src.verification.features import (
+    SignatureFeatures,
+    capture_scale_plan,
+    match_capture_scale,
+)
 from signature_verification_system.src.verification.signature_compare import (
     SCORE_ACCEPT_ANCHOR,
     SCORE_REJECT_ANCHOR,
@@ -61,6 +66,20 @@ class StrokeStats(BaseModel):
     aspect_ratio: float
 
 
+class QualityFinding(BaseModel):
+    code: str
+    message: str = Field(..., description="Plain-language text for the code")
+
+
+class ImageQualityView(BaseModel):
+    """What the signature quality gate found and how the image was routed."""
+    passed: bool
+    blocking_issues: List[QualityFinding] = Field(default_factory=list)
+    warnings: List[QualityFinding] = Field(default_factory=list)
+    background_removed: bool = Field(..., description="Ink was extracted from a textured (cheque) background")
+    background_texture: float = Field(..., description="Share of background pixels covered by security texture")
+
+
 class ImageInspection(BaseModel):
     """Intermediates for one input image; fields are None when that stage did not run."""
     width: int
@@ -69,9 +88,21 @@ class ImageInspection(BaseModel):
     harmonised_png: Optional[str] = None
     ink_crop_png: Optional[str] = None
     strokes_png: Optional[str] = None
-    bbox: Optional[List[int]] = Field(None, description="(x, y, w, h) of the signature in the input image")
+    bbox: Optional[List[int]] = Field(
+        None, description="(x, y, w, h) of the signature in the processed image (input x processing_scale)")
+    processing_scale: Optional[float] = Field(
+        None, description="Processed / input linear scale: > 1 low-resolution upscale, < 1 fine-capture downsample")
+    quality: Optional[ImageQualityView] = None
     stats: Optional[StrokeStats] = None
     error: Optional[str] = None
+
+
+class CaptureScaleMatch(BaseModel):
+    """The finer image was re-extracted at the coarser one's capture scale before scoring (EXP-027)."""
+    downsampled: Literal["reference", "questioned"]
+    factor: float = Field(..., description="Linear downsampling factor applied to that image")
+    scored_stroke_width_px: float = Field(..., description="Its canvas pen width after matching, as scored")
+    statement: str
 
 
 class SignalContribution(BaseModel):
@@ -136,6 +167,7 @@ class SignatureInspection(BaseModel):
     reference: ImageInspection
     questioned: ImageInspection
     alignment: Optional[AlignmentInspection] = None
+    capture_scale: Optional[CaptureScaleMatch] = None
     fusion: Optional[FusionBreakdown] = None
     margin: Optional[DecisionMargin] = None
     thresholds: Thresholds
@@ -156,11 +188,23 @@ def _features_or_error(gated: GatedSignature) -> tuple[Optional[SignatureFeature
     return gated.features, None
 
 
+def quality_view(quality: SignatureQuality) -> ImageQualityView:
+    """Gate result with a plain-language message per code."""
+    return ImageQualityView(
+        passed=quality.passed,
+        blocking_issues=[QualityFinding(code=c, message=quality_message(c)) for c in quality.blocking_issues],
+        warnings=[QualityFinding(code=c, message=quality_message(c)) for c in quality.warnings],
+        background_removed=quality.background_removed,
+        background_texture=quality.background_texture,
+    )
+
+
 def inspect_image(image: np.ndarray, feats: Optional[SignatureFeatures], error: Optional[str],
-                  params: RepresentationParams) -> ImageInspection:
+                  params: RepresentationParams, quality: Optional[SignatureQuality] = None) -> ImageInspection:
     """Render every intermediate that exists for one image."""
     h, w = image.shape[:2]
-    base = ImageInspection(width=w, height=h, original_png=visuals.render_original(image), error=error)
+    base = ImageInspection(width=w, height=h, original_png=visuals.render_original(image), error=error,
+                           quality=None if quality is None else quality_view(quality))
     if feats is None:
         return base
     norm, stroke = feats.normalized, feats.stroke
@@ -172,6 +216,7 @@ def inspect_image(image: np.ndarray, feats: Optional[SignatureFeatures], error: 
         "ink_crop_png": visuals.render_ink_crop(norm.ink),
         "strokes_png": visuals.render_strokes(norm.ink, skeleton, feats.keypoints[on_stroke], canvas_w, canvas_h),
         "bbox": [int(v) for v in norm.bbox],
+        "processing_scale": round(norm.gray.shape[1] / w, 4),
         "stats": StrokeStats(
             skeleton_points=0 if skeleton is None else int(len(skeleton)),
             keypoints=int(len(feats.keypoints)),
@@ -231,6 +276,32 @@ def alignment_inspection(ref: SignatureFeatures, que: SignatureFeatures, pair: P
     )
 
 
+def capture_scale_match(ref: SignatureFeatures, que: SignatureFeatures,
+                        p: RepresentationParams) -> Optional[CaptureScaleMatch]:
+    """What `compare` did about a capture-scale mismatch, or None if it compared the images as extracted.
+
+    Re-runs the same `match_capture_scale` (its re-extraction is cached); a failed
+    re-extraction falls back to the unmatched features and is reported as None.
+    """
+    plan = capture_scale_plan(ref, que)
+    if plan is None:
+        return None
+    ref_is_finer, factor = plan
+    matched_ref, matched_que = match_capture_scale(ref, que, p)
+    matched, original = (matched_ref, ref) if ref_is_finer else (matched_que, que)
+    if matched is original:
+        return None
+    role = "reference" if ref_is_finer else "questioned"
+    other = "questioned" if ref_is_finer else "reference"
+    width = round(float(getattr(matched.stroke, "stroke_width", 0.0)), 3)
+    return CaptureScaleMatch(
+        downsampled=role, factor=factor, scored_stroke_width_px=width,
+        statement=(f"Capture scale matched: the {role} image was downsampled ×{factor:.2f} to the {other} "
+                   f"image's coarser capture before scoring. Its pen width as scored is {width:.2f} px; "
+                   "the Stroke representation stage shows it as submitted."),
+    )
+
+
 def decision_margin(log_odds: Optional[float], reject_t: Optional[float],
                     accept_t: Optional[float]) -> Optional[DecisionMargin]:
     """Distance of the log-odds from the nearest decision threshold (no probabilities)."""
@@ -255,10 +326,10 @@ def inspect_signatures(reference: np.ndarray, questioned: np.ndarray,
 
     ref_feats, ref_err = _features_or_error(ref_gated)
     que_feats, que_err = _features_or_error(que_gated)
-    ref_view = inspect_image(reference, ref_feats, ref_err, p)
-    que_view = inspect_image(questioned, que_feats, que_err, p)
+    ref_view = inspect_image(reference, ref_feats, ref_err, p, ref_gated.quality)
+    que_view = inspect_image(questioned, que_feats, que_err, p, que_gated.quality)
 
-    alignment = fusion = None
+    alignment = fusion = capture = None
     consistency = Consistency()
     if comparison.band != "INCONCLUSIVE" and ref_feats is not None and que_feats is not None:
         pair = compare(ref_feats, que_feats, verifier.config.fusion, p)
@@ -269,11 +340,13 @@ def inspect_signatures(reference: np.ndarray, questioned: np.ndarray,
             contributions_sum_matches=bool(abs(total - pair.fused_logit) <= SUM_TOLERANCE),
         )
         alignment = alignment_inspection(ref_feats, que_feats, pair, verifier)
+        capture = capture_scale_match(ref_feats, que_feats, p)
         if consistency.log_odds_matches and consistency.contributions_sum_matches:
             fusion = breakdown
     done = time.perf_counter()
     return SignatureInspection(
-        comparison=comparison, reference=ref_view, questioned=que_view, alignment=alignment, fusion=fusion,
+        comparison=comparison, reference=ref_view, questioned=que_view, alignment=alignment,
+        capture_scale=capture, fusion=fusion,
         margin=decision_margin(comparison.log_odds, comparison.reject_threshold, comparison.accept_threshold),
         thresholds=Thresholds(accept_log_odds=comparison.accept_threshold, reject_log_odds=comparison.reject_threshold),
         consistency=consistency,
