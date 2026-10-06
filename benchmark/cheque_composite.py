@@ -254,16 +254,32 @@ def _logit(ref, que) -> float:
     return round(float(compare(ref, que).fused_logit), 6)
 
 
+def _ref_grouped_logits(evaluations, ref_feats) -> Dict[Tuple[str, int], float]:
+    """Logit of every (reference, query features) pair of all evaluations, each computed once.
+
+    Pairs are scored grouped by reference so the capture-scale re-extraction cache
+    (features._coarser: one entry per reference and factor) is reused across the
+    variants instead of being cycled out between evaluation passes. `compare` is
+    deterministic and the cache is content-keyed, so the order changes no logit.
+    """
+    jobs: Dict[Tuple[str, int], Tuple[object, object]] = {}
+    for pairs, que_feats in evaluations:
+        for p in pairs:
+            f = que_feats[p.query_id][0]
+            jobs.setdefault((p.ref_id, id(f)), (ref_feats[p.ref_id][0], f))
+    return {key: _logit(*jobs[key]) for key in sorted(jobs, key=lambda k: k[0])}
+
+
 def _clamp(x: float) -> float:
     return float(min(1.0, max(0.0, x)))
 
 
-def _evaluate(pairs, ref_feats, que_feats, acc: float, rej: float) -> Dict[str, object]:
+def _evaluate(pairs, que_feats, logits, acc: float, rej: float) -> Dict[str, object]:
     s: Dict[str, List[float]] = {"genuine": [], "skilled": [], "random": []}
     inconclusive: Dict[str, List[bool]] = {"genuine": [], "skilled": [], "random": []}
     for p in pairs:
         f, _ = que_feats[p.query_id]
-        s[p.label].append(_logit(ref_feats[p.ref_id][0], f))
+        s[p.label].append(logits[(p.ref_id, id(f))])
         inconclusive[p.label].append(f is None)
     rate = lambda v, fn: float(np.mean([fn(x) for x in v])) if v else 0.0  # noqa: E731
     out: Dict[str, object] = {
@@ -297,8 +313,9 @@ def score(data_dir: Path, cache_dir: Path, workers: int, max_random: int, both_t
     refs = mixed if both_textured else clean
 
     gs_pairs = [p for p in pairs if p.label in ("genuine", "skilled")]
-    res_mixed = _evaluate(pairs, refs, mixed, acc, rej)
-    res_var = {v: _evaluate(gs_pairs, refs, per_variant[v], acc, rej) for v in VARIANTS}
+    logits = _ref_grouped_logits([(pairs, mixed)] + [(gs_pairs, per_variant[v]) for v in VARIANTS], refs)
+    res_mixed = _evaluate(pairs, mixed, logits, acc, rej)
+    res_var = {v: _evaluate(gs_pairs, per_variant[v], logits, acc, rej) for v in VARIANTS}
 
     op = res_mixed["operating_point"]
     D = _clamp(1.0 - (0.75 * res_mixed["eer_skilled"] + 0.25 * res_mixed["eer_random"]) / EER_ZERO_POINT)
