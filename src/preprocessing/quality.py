@@ -18,7 +18,12 @@ import cv2
 import numpy as np
 from pydantic import BaseModel, Field
 
-from signature_verification_system.src.preprocessing.background import PreparedSignature, prepare_signature
+from signature_verification_system.src.preprocessing.background import (
+    MAX_ASPECT_RATIO,
+    MAX_PROCESS_PIXELS,
+    PreparedSignature,
+    prepare_signature,
+)
 from signature_verification_system.src.preprocessing.normalization import ensure_dark_ink, to_gray
 
 # Thresholds (clean-data minimum / maximum in brackets, 70 CEDAR images)
@@ -39,8 +44,8 @@ _LOG = logging.getLogger(__name__)
 QUALITY_MESSAGES = {
     "EMPTY_OR_INVALID_IMAGE": "The image is empty or too small to contain a signature.",
     "PREPROCESSING_FAILED": "The image could not be preprocessed (unsupported format or layout).",
-    "IMAGE_DIMENSIONS_UNSUPPORTED": "Image size is not supported: above 16 megapixels, or wider / taller than 20:1. "
-                                    "Crop the image to the signature.",
+    "IMAGE_DIMENSIONS_UNSUPPORTED": (f"Image size is not supported: above {MAX_PROCESS_PIXELS // 1_000_000} megapixels, "
+                                     f"or wider / taller than {MAX_ASPECT_RATIO:g}:1. Crop the image to the signature."),
     "INSUFFICIENT_INK_CONTRAST": "The ink is too faint against the paper.",
     "INSUFFICIENT_INK": "Too little ink was found to analyse a signature.",
     "SIGNATURE_TOO_SMALL": "The signature is too small in the image.",
